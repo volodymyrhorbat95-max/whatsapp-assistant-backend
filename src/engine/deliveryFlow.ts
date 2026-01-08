@@ -124,13 +124,18 @@ export const processDeliveryFlow = (
     };
   }
 
+  // Get custom messages from config or use defaults
+  const greetingMessage = config.messages?.greeting || 'Olá! Bem-vindo! 😊';
+  const confirmationMessage = config.messages?.confirmation || 'Pedido confirmado! 🎉';
+  const farewellMessage = config.messages?.farewell || 'Em breve estará a caminho. Obrigado!';
+
   // State machine logic
   switch (currentState) {
     case 'greeting': {
       if (parser.parseGreeting(message)) {
         const menuText = formatMenu(config);
         return {
-          response: `Olá! Bem-vindo! 😊\n\n${menuText}`,
+          response: `${greetingMessage}\n\n${menuText}`,
           newState: 'showing_menu',
           collectedData: { ...collectedData, items: [] },
           shouldTransfer: false,
@@ -283,7 +288,7 @@ export const processDeliveryFlow = (
     case 'confirming_order': {
       if (parser.parseYes(message)) {
         return {
-          response: 'Pedido confirmado! 🎉\n\nEm breve estará a caminho. Obrigado!',
+          response: `${confirmationMessage}\n\n${farewellMessage}`,
           newState: 'order_confirmed',
           collectedData,
           shouldTransfer: false,

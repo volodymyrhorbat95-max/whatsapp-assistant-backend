@@ -73,10 +73,11 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
     from
   );
 
-  // Set flowType to 'delivery' on first message if not set
+  // Set flowType based on client segment on first message if not set
   if (!conversation.flowType) {
-    await conversationService.updateState(conversation.id, 'greeting', {});
-    conversation.flowType = 'delivery';
+    const flowType = client.segment; // 'delivery' or 'clothing' from client config
+    await conversationService.updateFlowType(conversation.id, flowType);
+    conversation.flowType = flowType;
     conversation.currentState = 'greeting';
     conversation.collectedData = {};
   }

@@ -16,6 +16,10 @@ export const createMessage = async (
     messageType
   });
 
+  // Log message received/sent
+  const directionLabel = direction === 'incoming' ? 'received' : 'sent';
+  console.log(`Message ${directionLabel} [${messageType}] for conversation ${conversationId}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`);
+
   // Update conversation timestamp
   await updateConversationTimestamp(conversationId);
 

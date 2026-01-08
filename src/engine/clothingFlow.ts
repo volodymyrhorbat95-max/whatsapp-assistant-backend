@@ -34,6 +34,11 @@ export const processClothingFlow = (
 ): FlowResponse => {
   const state = currentState || 'greeting';
 
+  // Get custom messages from config or use defaults
+  const greetingMessage = config.messages?.greeting || 'Olá! Bem-vindo!';
+  const confirmationMessage = config.messages?.confirmation || 'Reserva confirmada!';
+  const farewellMessage = config.messages?.farewell || 'Vamos preparar seu pedido. Em breve entraremos em contato. Obrigado! 🎉';
+
   // Complaint detection at any stage
   if (parser.parseComplaint(message)) {
     return {
@@ -363,7 +368,7 @@ export const processClothingFlow = (
       // Step 9: Customer says yes → Reservation is recorded
       if (parser.parseYes(message)) {
         return {
-          response: 'Reserva confirmada! Vamos preparar seu pedido. Em breve entraremos em contato. Obrigado! 🎉',
+          response: `${confirmationMessage} ${farewellMessage}`,
           newState: 'reservation_confirmed',
           collectedData,
           shouldTransfer: false,

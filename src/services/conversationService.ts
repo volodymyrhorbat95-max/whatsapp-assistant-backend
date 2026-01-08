@@ -183,6 +183,9 @@ export const transferToHuman = async (
     },
     { where: { id: conversationId } }
   );
+
+  // Log human fallback with reason
+  console.log(`Human fallback triggered for conversation ${conversationId}. Reason: ${reason}`);
 };
 
 // Mark conversation as completed
@@ -190,6 +193,21 @@ export const markCompleted = async (conversationId: number): Promise<void> => {
   await Conversation.update(
     {
       status: 'completed',
+      lastMessageAt: new Date()
+    },
+    { where: { id: conversationId } }
+  );
+};
+
+// Set flow type for conversation (based on client segment)
+export const updateFlowType = async (
+  conversationId: number,
+  flowType: 'delivery' | 'clothing'
+): Promise<void> => {
+  await Conversation.update(
+    {
+      flowType,
+      currentState: 'greeting',
       lastMessageAt: new Date()
     },
     { where: { id: conversationId } }

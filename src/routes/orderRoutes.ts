@@ -128,8 +128,8 @@ router.put('/:id/status', async (req: Request, res: Response): Promise<void> => 
           const client = await Client.findByPk(order.clientId);
           if (client) {
             const statusMessage = STATUS_MESSAGES[status as OrderStatus];
+            // Send message to customer phone
             await twilioService.sendWhatsAppMessage(
-              client.whatsappNumber,
               conversation.customerPhone,
               statusMessage
             );

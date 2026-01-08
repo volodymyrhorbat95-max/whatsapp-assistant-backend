@@ -17,16 +17,32 @@ export const createOrder = async (
   collectedData: CollectedData
 ): Promise<Order> => {
   try {
-    const items = collectedData.items || [];
+    let items = collectedData.items || [];
+    let totalAmount = 0;
 
-    if (items.length === 0) {
-      throw new Error('Cannot create order with no items');
+    // Handle delivery flow (items array)
+    if (items.length > 0) {
+      totalAmount = items.reduce((sum, item) => {
+        return sum + (item.price * item.quantity);
+      }, 0);
+    }
+    // Handle clothing flow (single product)
+    else if (collectedData.product) {
+      items = [{
+        name: collectedData.product.name,
+        price: collectedData.product.price,
+        quantity: 1
+      }];
+      totalAmount = collectedData.product.price;
+    }
+    else {
+      throw new Error('Cannot create order with no items or product');
     }
 
-    // Calculate total amount
-    const totalAmount = items.reduce((sum, item) => {
-      return sum + (item.price * item.quantity);
-    }, 0);
+    // Determine delivery address
+    // For clothing: could be address (delivery) or null (pickup)
+    const deliveryAddress = collectedData.address ||
+      (collectedData.deliveryType === 'pickup' ? 'Retirar na loja' : null);
 
     // Create order
     const order = await Order.create({
@@ -35,7 +51,7 @@ export const createOrder = async (
       status: 'confirmed',
       items,
       totalAmount,
-      deliveryAddress: collectedData.address || null,
+      deliveryAddress,
       paymentMethod: collectedData.paymentMethod || null
     });
 
