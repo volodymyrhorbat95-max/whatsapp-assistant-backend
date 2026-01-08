@@ -34,11 +34,18 @@ export interface CustomMessages {
   fallback?: string;
 }
 
+// Financial health - costs for margin estimation
+export interface BusinessCosts {
+  fixedCosts?: number;     // Monthly fixed costs (rent, utilities, etc.)
+  variableCostPercent?: number;  // Variable cost as % of revenue (ingredients, materials)
+}
+
 export interface ClientConfiguration {
   catalog?: CatalogCategory[];
   paymentMethods?: PaymentMethod[];
   operatingHours?: OperatingHours;
   messages?: CustomMessages;
+  costs?: BusinessCosts;
 }
 
 export interface Client {
@@ -106,7 +113,7 @@ export interface Message {
 }
 
 // Order types
-export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
 export type PaymentMethod = 'pix' | 'card' | 'cash';
 
 export interface OrderItem {
@@ -132,6 +139,7 @@ export interface Order {
 export interface ConversationWithMessages extends Conversation {
   messages: Message[];
   client?: Client;
+  order?: Order;
 }
 
 export interface ConversationListItem {

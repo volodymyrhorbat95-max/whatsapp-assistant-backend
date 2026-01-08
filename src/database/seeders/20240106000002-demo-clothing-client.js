@@ -49,10 +49,24 @@ module.exports = {
             ]}
           ],
           paymentMethods: ['pix', 'card', 'cash'],
+          operatingHours: {
+            monday: { open: '09:00', close: '18:00' },
+            tuesday: { open: '09:00', close: '18:00' },
+            wednesday: { open: '09:00', close: '18:00' },
+            thursday: { open: '09:00', close: '18:00' },
+            friday: { open: '09:00', close: '18:00' },
+            saturday: { open: '09:00', close: '14:00' },
+            sunday: { open: 'closed', close: 'closed' }
+          },
           messages: {
             greeting: 'Olá! Bem-vindo à Loja de Roupas da Maria. Que produto você está procurando?',
             confirmation: 'Posso reservar e confirmar?',
-            farewell: 'Obrigado pela preferência!'
+            farewell: 'Obrigado pela preferência!',
+            fallback: 'Desculpe, não entendi. Pode me dizer o tipo de roupa que procura?'
+          },
+          costs: {
+            fixedCosts: 3500,
+            variableCostPercent: 45
           }
         }),
         created_at: new Date(),
@@ -62,6 +76,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('clients', { segment: 'clothing' }, {});
+    await queryInterface.bulkDelete('clients', { whatsapp_number: '+5511988888888' }, {});
   }
 };

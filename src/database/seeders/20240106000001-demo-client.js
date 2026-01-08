@@ -27,10 +27,24 @@ module.exports = {
             ]}
           ],
           paymentMethods: ['pix', 'card', 'cash'],
+          operatingHours: {
+            monday: { open: '18:00', close: '23:00' },
+            tuesday: { open: '18:00', close: '23:00' },
+            wednesday: { open: '18:00', close: '23:00' },
+            thursday: { open: '18:00', close: '23:00' },
+            friday: { open: '18:00', close: '00:00' },
+            saturday: { open: '18:00', close: '00:00' },
+            sunday: { open: '18:00', close: '22:00' }
+          },
           messages: {
             greeting: 'Olá! Bem-vindo à Pizzaria do João. Como posso ajudar?',
             confirmation: 'Posso confirmar o seu pedido?',
-            farewell: 'Obrigado pela preferência!'
+            farewell: 'Obrigado pela preferência!',
+            fallback: 'Desculpe, não entendi. Pode repetir?'
+          },
+          costs: {
+            fixedCosts: 5000,
+            variableCostPercent: 35
           }
         }),
         created_at: new Date(),
@@ -40,6 +54,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('clients', null, {});
+    await queryInterface.bulkDelete('clients', { whatsapp_number: '+5511999999999' }, {});
   }
 };

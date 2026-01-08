@@ -3,13 +3,20 @@ import sequelize from './index';
 import Conversation from './Conversation';
 import Client from './Client';
 
+// OrderItem interface matching types/index.ts
+interface OrderItem {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 // Interface matching database schema
 interface OrderAttributes {
   id: number;
   conversationId: number;
   clientId: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'delivered' | 'cancelled';
-  items: object[];
+  status: 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  items: OrderItem[];
   totalAmount: number | null;
   deliveryAddress: string | null;
   paymentMethod: 'pix' | 'card' | 'cash' | null;
@@ -23,8 +30,8 @@ class Order extends Model<OrderAttributes, OrderCreationAttributes> implements O
   public id!: number;
   public conversationId!: number;
   public clientId!: number;
-  public status!: 'pending' | 'confirmed' | 'preparing' | 'delivered' | 'cancelled';
-  public items!: object[];
+  public status!: 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  public items!: OrderItem[];
   public totalAmount!: number | null;
   public deliveryAddress!: string | null;
   public paymentMethod!: 'pix' | 'card' | 'cash' | null;
@@ -58,7 +65,7 @@ Order.init(
       }
     },
     status: {
-      type: DataTypes.ENUM('pending', 'confirmed', 'preparing', 'delivered', 'cancelled'),
+      type: DataTypes.ENUM('pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'),
       allowNull: false,
       defaultValue: 'pending'
     },

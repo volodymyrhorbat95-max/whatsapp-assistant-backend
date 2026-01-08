@@ -5,12 +5,23 @@ import { Op } from 'sequelize';
 import Conversation from '../database/models/Conversation';
 import Order from '../database/models/Order';
 import Message from '../database/models/Message';
+import Client from '../database/models/Client';
+import { BusinessCosts } from '../types';
 
 export interface OverviewMetrics {
   conversationsStarted: number;
   conversions: number;
   abandonments: number;
   averageTicket: number;
+}
+
+export interface FinancialHealth {
+  totalRevenue: number;
+  fixedCosts: number;
+  variableCosts: number;
+  estimatedProfit: number;
+  profitMargin: number;
+  orderCount: number;
 }
 
 export interface PaymentMethodBreakdown {
@@ -258,4 +269,56 @@ export const exportToCSV = async (
   });
 
   return csv;
+};
+
+/**
+ * Get financial health metrics (margin estimation)
+ * Uses client's registered costs to estimate profit margin
+ */
+export const getFinancialHealth = async (
+  startDate: Date,
+  endDate: Date,
+  clientId: number
+): Promise<FinancialHealth | null> => {
+  // Get client's cost configuration
+  const client = await Client.findByPk(clientId);
+  if (!client) {
+    return null;
+  }
+
+  const config = client.configuration as { costs?: BusinessCosts } | null;
+  const costs = config?.costs || {};
+  const fixedCosts = costs.fixedCosts || 0;
+  const variableCostPercent = costs.variableCostPercent || 0;
+
+  // Get orders in date range
+  const orders = await Order.findAll({
+    where: {
+      clientId,
+      createdAt: {
+        [Op.between]: [startDate, endDate]
+      }
+    },
+    attributes: ['totalAmount']
+  });
+
+  // Calculate total revenue
+  const totalRevenue = orders.reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
+  const orderCount = orders.length;
+
+  // Calculate costs
+  const variableCosts = totalRevenue * (variableCostPercent / 100);
+
+  // Calculate profit
+  const estimatedProfit = totalRevenue - fixedCosts - variableCosts;
+  const profitMargin = totalRevenue > 0 ? (estimatedProfit / totalRevenue) * 100 : 0;
+
+  return {
+    totalRevenue: Math.round(totalRevenue * 100) / 100,
+    fixedCosts: Math.round(fixedCosts * 100) / 100,
+    variableCosts: Math.round(variableCosts * 100) / 100,
+    estimatedProfit: Math.round(estimatedProfit * 100) / 100,
+    profitMargin: Math.round(profitMargin * 100) / 100,
+    orderCount
+  };
 };

@@ -69,7 +69,7 @@ export const getAllConversations = async (filters?: {
   return results;
 };
 
-// Get single conversation with all messages
+// Get single conversation with all messages and order
 export const getConversationById = async (id: number): Promise<ConversationWithMessages | null> => {
   const conversation = await Conversation.findByPk(id, {
     include: [
@@ -81,6 +81,10 @@ export const getConversationById = async (id: number): Promise<ConversationWithM
       {
         model: Client,
         as: 'client'
+      },
+      {
+        model: Order,
+        as: 'order'
       }
     ]
   });
@@ -103,7 +107,8 @@ export const getConversationById = async (id: number): Promise<ConversationWithM
     createdAt: conversation.createdAt,
     updatedAt: conversation.updatedAt,
     messages: (conversation.get('messages') as Message[]) || [],
-    client: conversation.get('client') as Client
+    client: conversation.get('client') as Client,
+    order: conversation.get('order') as Order | undefined
   };
 };
 

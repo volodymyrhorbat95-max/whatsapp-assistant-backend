@@ -110,6 +110,43 @@ router.get('/top-items', async (req: Request, res: Response): Promise<void> => {
 });
 
 /**
+ * GET /api/reports/financial-health
+ * Get financial health metrics (margin estimation)
+ * Query params: startDate, endDate, clientId (REQUIRED)
+ */
+router.get('/financial-health', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { startDate, endDate, clientId } = req.query;
+
+    if (!startDate || !endDate || !clientId) {
+      res.status(400).json({ error: 'startDate, endDate, and clientId are required' });
+      return;
+    }
+
+    const start = new Date(startDate as string);
+    const end = new Date(endDate as string);
+    const client = parseInt(clientId as string, 10);
+
+    if (isNaN(client)) {
+      res.status(400).json({ error: 'Invalid clientId' });
+      return;
+    }
+
+    const financialHealth = await reportsService.getFinancialHealth(start, end, client);
+
+    if (!financialHealth) {
+      res.status(404).json({ error: 'Client not found' });
+      return;
+    }
+
+    res.json(financialHealth);
+  } catch (error: any) {
+    console.error('Error fetching financial health:', error);
+    res.status(500).json({ error: 'Failed to fetch financial health' });
+  }
+});
+
+/**
  * GET /api/reports/export-csv
  * Export reports data to CSV
  * Query params: startDate, endDate, clientId (optional)

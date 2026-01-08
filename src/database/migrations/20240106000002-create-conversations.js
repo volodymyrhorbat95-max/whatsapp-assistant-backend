@@ -3,6 +3,9 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Drop existing enum types if they exist (from previous migrations)
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_conversations_status" CASCADE');
+
     await queryInterface.createTable('conversations', {
       id: {
         type: Sequelize.INTEGER,
@@ -32,6 +35,21 @@ module.exports = {
         type: Sequelize.STRING(255),
         allowNull: true
       },
+      current_state: {
+        type: Sequelize.STRING(50),
+        allowNull: true,
+        defaultValue: 'greeting'
+      },
+      collected_data: {
+        type: Sequelize.JSONB,
+        allowNull: true,
+        defaultValue: {}
+      },
+      flow_type: {
+        type: Sequelize.STRING(20),
+        allowNull: true,
+        defaultValue: null
+      },
       started_at: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -60,5 +78,7 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('conversations');
+    // Drop enum types
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_conversations_status" CASCADE');
   }
 };

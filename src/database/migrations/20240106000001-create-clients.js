@@ -3,6 +3,10 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Drop existing enum types if they exist (from previous migrations)
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_clients_segment" CASCADE');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_clients_status" CASCADE');
+
     await queryInterface.createTable('clients', {
       id: {
         type: Sequelize.INTEGER,
@@ -47,5 +51,8 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('clients');
+    // Drop enum types
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_clients_segment" CASCADE');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_clients_status" CASCADE');
   }
 };

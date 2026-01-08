@@ -3,6 +3,10 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Drop existing enum types if they exist (from previous migrations)
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_orders_status" CASCADE');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_orders_payment_method" CASCADE');
+
     await queryInterface.createTable('orders', {
       id: {
         type: Sequelize.INTEGER,
@@ -30,7 +34,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       status: {
-        type: Sequelize.ENUM('pending', 'confirmed', 'preparing', 'delivered', 'cancelled'),
+        type: Sequelize.ENUM('pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'),
         allowNull: false,
         defaultValue: 'pending'
       },
@@ -69,5 +73,8 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('orders');
+    // Drop enum types
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_orders_status" CASCADE');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_orders_payment_method" CASCADE');
   }
 };
