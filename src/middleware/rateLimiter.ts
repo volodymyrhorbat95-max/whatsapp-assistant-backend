@@ -26,7 +26,7 @@ export const globalLimiter = rateLimit({
  */
 export const reportsLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // Max 30 requests per minute
+  max: 60, // Max 30 requests per minute
   message: {
     error: 'Too many report requests',
     message: 'Please wait before requesting more reports'
