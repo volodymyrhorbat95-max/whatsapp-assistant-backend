@@ -20,7 +20,7 @@ module.exports = {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT' // Prevent client deletion if conversations exist
       },
       customer_phone: {
         type: Sequelize.STRING(20),

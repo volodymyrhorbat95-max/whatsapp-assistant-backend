@@ -21,7 +21,7 @@ module.exports = {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT' // Prevent conversation deletion if orders exist
       },
       client_id: {
         type: Sequelize.INTEGER,
@@ -31,7 +31,7 @@ module.exports = {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT' // Prevent client deletion if orders exist
       },
       status: {
         type: Sequelize.ENUM('pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'),

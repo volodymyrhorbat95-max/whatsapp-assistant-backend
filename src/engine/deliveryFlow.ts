@@ -153,8 +153,8 @@ export const processDeliveryFlow = (
     }
 
     case 'showing_menu': {
-      // Try to parse category
-      const category = parser.parseCategory(message);
+      // Try to parse category (pass config for dynamic matching)
+      const category = parser.parseCategory(message, config);
       if (category) {
         const itemsText = getItemsFromCategory(category, config);
         if (itemsText) {
@@ -168,8 +168,13 @@ export const processDeliveryFlow = (
         }
       }
 
+      // Build dynamic category list from config
+      const categoryList = config.catalog && config.catalog.length > 0
+        ? config.catalog.map(c => c.category).join(', ')
+        : 'Hambúrgueres, Pizzas ou Bebidas';
+
       return {
-        response: 'Por favor, escolha uma categoria: Hambúrgueres, Pizzas ou Bebidas.',
+        response: `Por favor, escolha uma categoria: ${categoryList}.`,
         newState: 'showing_menu',
         collectedData,
         shouldTransfer: false,

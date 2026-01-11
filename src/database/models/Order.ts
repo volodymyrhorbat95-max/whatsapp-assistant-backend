@@ -106,9 +106,10 @@ Order.init(
 );
 
 // Associations
-Order.belongsTo(Conversation, { foreignKey: 'conversationId', as: 'conversation' });
-Order.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
-Conversation.hasOne(Order, { foreignKey: 'conversationId', as: 'order' });
-Client.hasMany(Order, { foreignKey: 'clientId', as: 'orders' });
+// RESTRICT prevents accidental deletion of conversations/clients with existing orders
+Order.belongsTo(Conversation, { foreignKey: 'conversationId', as: 'conversation', onDelete: 'RESTRICT' });
+Order.belongsTo(Client, { foreignKey: 'clientId', as: 'client', onDelete: 'RESTRICT' });
+Conversation.hasOne(Order, { foreignKey: 'conversationId', as: 'order', onDelete: 'RESTRICT' });
+Client.hasMany(Order, { foreignKey: 'clientId', as: 'orders', onDelete: 'RESTRICT' });
 
 export default Order;

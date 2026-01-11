@@ -122,7 +122,8 @@ Conversation.init(
 );
 
 // Associations
-Conversation.belongsTo(Client, { foreignKey: 'clientId', as: 'client' });
-Client.hasMany(Conversation, { foreignKey: 'clientId', as: 'conversations' });
+// RESTRICT prevents accidental deletion of clients with existing conversations
+Conversation.belongsTo(Client, { foreignKey: 'clientId', as: 'client', onDelete: 'RESTRICT' });
+Client.hasMany(Conversation, { foreignKey: 'clientId', as: 'conversations', onDelete: 'RESTRICT' });
 
 export default Conversation;

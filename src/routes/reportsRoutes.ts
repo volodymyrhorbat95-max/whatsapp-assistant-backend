@@ -2,26 +2,54 @@
 
 import { Router, Request, Response } from 'express';
 import * as reportsService from '../services/reportsService';
+import { requireAuth } from '../middleware/auth';
+import { reportsLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+
+// Apply rate limiting to all report routes (expensive queries)
+router.use(reportsLimiter);
 
 /**
  * GET /api/reports/overview
  * Get overview metrics (conversations, conversions, abandonments, average ticket)
- * Query params: startDate, endDate, clientId (optional)
+ * CRITICAL: Query params: startDate, endDate, clientId (REQUIRED for data isolation)
  */
-router.get('/overview', async (req: Request, res: Response): Promise<void> => {
+router.get('/overview', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, clientId } = req.query;
 
-    if (!startDate || !endDate) {
-      res.status(400).json({ error: 'startDate and endDate are required' });
+    // CRITICAL: clientId is REQUIRED for multi-client data isolation
+    if (!startDate || !endDate || !clientId) {
+      res.status(400).json({ error: 'startDate, endDate, and clientId are required' });
       return;
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    const client = clientId ? parseInt(clientId as string, 10) : undefined;
+    const client = parseInt(clientId as string, 10);
+
+    // Validate dates are valid
+    if (isNaN(start.getTime())) {
+      res.status(400).json({ error: 'Invalid startDate format' });
+      return;
+    }
+
+    if (isNaN(end.getTime())) {
+      res.status(400).json({ error: 'Invalid endDate format' });
+      return;
+    }
+
+    if (end < start) {
+      res.status(400).json({ error: 'endDate must be after or equal to startDate' });
+      return;
+    }
+
+    // Validate clientId
+    if (isNaN(client)) {
+      res.status(400).json({ error: 'Invalid clientId format' });
+      return;
+    }
 
     const metrics = await reportsService.getOverviewMetrics(start, end, client);
     res.json(metrics);
@@ -34,20 +62,43 @@ router.get('/overview', async (req: Request, res: Response): Promise<void> => {
 /**
  * GET /api/reports/payment-methods
  * Get payment methods breakdown
- * Query params: startDate, endDate, clientId (optional)
+ * CRITICAL: Query params: startDate, endDate, clientId (REQUIRED for data isolation)
  */
-router.get('/payment-methods', async (req: Request, res: Response): Promise<void> => {
+router.get('/payment-methods', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, clientId } = req.query;
 
-    if (!startDate || !endDate) {
-      res.status(400).json({ error: 'startDate and endDate are required' });
+    // CRITICAL: clientId is REQUIRED for multi-client data isolation
+    if (!startDate || !endDate || !clientId) {
+      res.status(400).json({ error: 'startDate, endDate, and clientId are required' });
       return;
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    const client = clientId ? parseInt(clientId as string, 10) : undefined;
+    const client = parseInt(clientId as string, 10);
+
+    // Validate dates
+    if (isNaN(start.getTime())) {
+      res.status(400).json({ error: 'Invalid startDate format' });
+      return;
+    }
+
+    if (isNaN(end.getTime())) {
+      res.status(400).json({ error: 'Invalid endDate format' });
+      return;
+    }
+
+    if (end < start) {
+      res.status(400).json({ error: 'endDate must be after or equal to startDate' });
+      return;
+    }
+
+    // Validate clientId
+    if (isNaN(client)) {
+      res.status(400).json({ error: 'Invalid clientId format' });
+      return;
+    }
 
     const breakdown = await reportsService.getPaymentMethodsBreakdown(start, end, client);
     res.json(breakdown);
@@ -60,20 +111,43 @@ router.get('/payment-methods', async (req: Request, res: Response): Promise<void
 /**
  * GET /api/reports/peak-hours
  * Get peak hours (when most conversations start)
- * Query params: startDate, endDate, clientId (optional)
+ * CRITICAL: Query params: startDate, endDate, clientId (REQUIRED for data isolation)
  */
-router.get('/peak-hours', async (req: Request, res: Response): Promise<void> => {
+router.get('/peak-hours', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, clientId } = req.query;
 
-    if (!startDate || !endDate) {
-      res.status(400).json({ error: 'startDate and endDate are required' });
+    // CRITICAL: clientId is REQUIRED for multi-client data isolation
+    if (!startDate || !endDate || !clientId) {
+      res.status(400).json({ error: 'startDate, endDate, and clientId are required' });
       return;
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    const client = clientId ? parseInt(clientId as string, 10) : undefined;
+    const client = parseInt(clientId as string, 10);
+
+    // Validate dates
+    if (isNaN(start.getTime())) {
+      res.status(400).json({ error: 'Invalid startDate format' });
+      return;
+    }
+
+    if (isNaN(end.getTime())) {
+      res.status(400).json({ error: 'Invalid endDate format' });
+      return;
+    }
+
+    if (end < start) {
+      res.status(400).json({ error: 'endDate must be after or equal to startDate' });
+      return;
+    }
+
+    // Validate clientId
+    if (isNaN(client)) {
+      res.status(400).json({ error: 'Invalid clientId format' });
+      return;
+    }
 
     const peakHours = await reportsService.getPeakHours(start, end, client);
     res.json(peakHours);
@@ -86,20 +160,43 @@ router.get('/peak-hours', async (req: Request, res: Response): Promise<void> => 
 /**
  * GET /api/reports/top-items
  * Get most requested items/products
- * Query params: startDate, endDate, clientId (optional)
+ * CRITICAL: Query params: startDate, endDate, clientId (REQUIRED for data isolation)
  */
-router.get('/top-items', async (req: Request, res: Response): Promise<void> => {
+router.get('/top-items', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, clientId } = req.query;
 
-    if (!startDate || !endDate) {
-      res.status(400).json({ error: 'startDate and endDate are required' });
+    // CRITICAL: clientId is REQUIRED for multi-client data isolation
+    if (!startDate || !endDate || !clientId) {
+      res.status(400).json({ error: 'startDate, endDate, and clientId are required' });
       return;
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    const client = clientId ? parseInt(clientId as string, 10) : undefined;
+    const client = parseInt(clientId as string, 10);
+
+    // Validate dates
+    if (isNaN(start.getTime())) {
+      res.status(400).json({ error: 'Invalid startDate format' });
+      return;
+    }
+
+    if (isNaN(end.getTime())) {
+      res.status(400).json({ error: 'Invalid endDate format' });
+      return;
+    }
+
+    if (end < start) {
+      res.status(400).json({ error: 'endDate must be after or equal to startDate' });
+      return;
+    }
+
+    // Validate clientId
+    if (isNaN(client)) {
+      res.status(400).json({ error: 'Invalid clientId format' });
+      return;
+    }
 
     const topItems = await reportsService.getTopItems(start, end, client);
     res.json(topItems);
@@ -114,7 +211,7 @@ router.get('/top-items', async (req: Request, res: Response): Promise<void> => {
  * Get financial health metrics (margin estimation)
  * Query params: startDate, endDate, clientId (REQUIRED)
  */
-router.get('/financial-health', async (req: Request, res: Response): Promise<void> => {
+router.get('/financial-health', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, clientId } = req.query;
 
@@ -126,6 +223,22 @@ router.get('/financial-health', async (req: Request, res: Response): Promise<voi
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
     const client = parseInt(clientId as string, 10);
+
+    // Validate dates
+    if (isNaN(start.getTime())) {
+      res.status(400).json({ error: 'Invalid startDate format' });
+      return;
+    }
+
+    if (isNaN(end.getTime())) {
+      res.status(400).json({ error: 'Invalid endDate format' });
+      return;
+    }
+
+    if (end < start) {
+      res.status(400).json({ error: 'endDate must be after or equal to startDate' });
+      return;
+    }
 
     if (isNaN(client)) {
       res.status(400).json({ error: 'Invalid clientId' });
@@ -149,20 +262,43 @@ router.get('/financial-health', async (req: Request, res: Response): Promise<voi
 /**
  * GET /api/reports/export-csv
  * Export reports data to CSV
- * Query params: startDate, endDate, clientId (optional)
+ * CRITICAL: Query params: startDate, endDate, clientId (REQUIRED for data isolation)
  */
-router.get('/export-csv', async (req: Request, res: Response): Promise<void> => {
+router.get('/export-csv', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate, clientId } = req.query;
 
-    if (!startDate || !endDate) {
-      res.status(400).json({ error: 'startDate and endDate are required' });
+    // CRITICAL: clientId is REQUIRED for multi-client data isolation
+    if (!startDate || !endDate || !clientId) {
+      res.status(400).json({ error: 'startDate, endDate, and clientId are required' });
       return;
     }
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    const client = clientId ? parseInt(clientId as string, 10) : undefined;
+    const client = parseInt(clientId as string, 10);
+
+    // Validate dates
+    if (isNaN(start.getTime())) {
+      res.status(400).json({ error: 'Invalid startDate format' });
+      return;
+    }
+
+    if (isNaN(end.getTime())) {
+      res.status(400).json({ error: 'Invalid endDate format' });
+      return;
+    }
+
+    if (end < start) {
+      res.status(400).json({ error: 'endDate must be after or equal to startDate' });
+      return;
+    }
+
+    // Validate clientId
+    if (isNaN(client)) {
+      res.status(400).json({ error: 'Invalid clientId format' });
+      return;
+    }
 
     const csv = await reportsService.exportToCSV(start, end, client);
 

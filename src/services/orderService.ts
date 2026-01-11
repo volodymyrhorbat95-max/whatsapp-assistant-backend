@@ -2,7 +2,7 @@
 // Saves confirmed delivery and clothing orders to database
 
 import Order from '../database/models/Order';
-import { CollectedData } from '../types';
+import { CollectedData, OrderStatus } from '../types';
 
 /**
  * Create a new order from collected conversation data
@@ -31,12 +31,48 @@ export const createOrder = async (
       items = [{
         name: collectedData.product.name,
         price: collectedData.product.price,
-        quantity: 1
+        quantity: 1,
+        // Include clothing-specific fields for analytics
+        size: collectedData.product.size,
+        color: collectedData.product.color,
+        gender: collectedData.product.gender
       }];
       totalAmount = collectedData.product.price;
     }
     else {
       throw new Error('Cannot create order with no items or product');
+    }
+
+    // CRITICAL VALIDATION: Validate all items before creating order
+    for (const item of items) {
+      // Validate item name
+      if (!item.name || typeof item.name !== 'string' || item.name.trim().length === 0) {
+        throw new Error('Item name cannot be empty');
+      }
+
+      // Validate item price
+      if (typeof item.price !== 'number' || isNaN(item.price)) {
+        throw new Error(`Invalid price for item "${item.name}"`);
+      }
+      if (item.price < 0) {
+        throw new Error(`Price cannot be negative for item "${item.name}"`);
+      }
+
+      // Validate item quantity
+      if (typeof item.quantity !== 'number' || isNaN(item.quantity)) {
+        throw new Error(`Invalid quantity for item "${item.name}"`);
+      }
+      if (item.quantity <= 0) {
+        throw new Error(`Quantity must be greater than zero for item "${item.name}"`);
+      }
+      if (!Number.isInteger(item.quantity)) {
+        throw new Error(`Quantity must be a whole number for item "${item.name}"`);
+      }
+    }
+
+    // Validate total amount
+    if (totalAmount <= 0) {
+      throw new Error('Total amount must be greater than zero');
     }
 
     // Determine delivery address
@@ -45,10 +81,12 @@ export const createOrder = async (
       (collectedData.deliveryType === 'pickup' ? 'Retirar na loja' : null);
 
     // Create order
+    // Order starts as 'pending' per requirements (Line 81): "The order was just created but not yet confirmed by the customer"
+    // Business owner must confirm in dashboard to change to 'confirmed'
     const order = await Order.create({
       conversationId,
       clientId,
-      status: 'confirmed',
+      status: 'pending',
       items,
       totalAmount,
       deliveryAddress,
@@ -117,10 +155,11 @@ export const getOrdersByClient = async (clientId: number): Promise<Order[]> => {
  * @param orderId - Order ID
  * @param status - New status
  * @returns Updated order or null
+ * Bug #7 Fix: Use centralized OrderStatus type
  */
 export const updateOrderStatus = async (
   orderId: number,
-  status: 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled'
+  status: OrderStatus
 ): Promise<Order | null> => {
   try {
     const order = await Order.findByPk(orderId);

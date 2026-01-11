@@ -314,7 +314,9 @@ export const processClothingFlow = (
     }
 
     case 'asking_payment': {
-      if (!validators.validatePaymentMethod(message)) {
+      const paymentMethod = parser.parsePayment(message);
+
+      if (!paymentMethod) {
         return {
           response: 'Não entendi. Forma de pagamento: Pix, Cartão ou Dinheiro?',
           newState: 'asking_payment',
@@ -322,17 +324,6 @@ export const processClothingFlow = (
           shouldTransfer: false,
           shouldCreateReservation: false
         };
-      }
-
-      const normalized = message.toLowerCase().trim();
-      let paymentMethod: 'pix' | 'card' | 'cash';
-
-      if (normalized.includes('pix')) {
-        paymentMethod = 'pix';
-      } else if (normalized.includes('cartao') || normalized.includes('cartão') || normalized.includes('card')) {
-        paymentMethod = 'card';
-      } else {
-        paymentMethod = 'cash';
       }
 
       const product = collectedData.product!;

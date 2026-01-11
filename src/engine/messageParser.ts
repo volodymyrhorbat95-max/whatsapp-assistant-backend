@@ -1,6 +1,8 @@
 // Message parser - Extract meaning from customer input
 // All messages in Brazilian Portuguese (PT-BR)
 
+import { ClientConfiguration } from '../types';
+
 export interface ParsedMessage {
   intent: 'greeting' | 'yes' | 'no' | 'cancel' | 'complaint' | 'item_selection' | 'address' | 'payment' | 'unknown';
   value?: string;
@@ -102,19 +104,22 @@ export const parseItemSelection = (message: string, availableItems: string[]): s
   return selectedItems;
 };
 
-// Parse category selection
-export const parseCategory = (message: string): string | null => {
+// Parse category selection - dynamic based on client's actual catalog
+export const parseCategory = (message: string, config: ClientConfiguration): string | null => {
   const normalized = normalize(message);
 
-  const categories = [
-    { names: ['hamburguer', 'hamburgueres', 'burger'], value: 'Hambúrgueres' },
-    { names: ['pizza', 'pizzas'], value: 'Pizzas' },
-    { names: ['bebida', 'bebidas', 'drink'], value: 'Bebidas' }
-  ];
+  // Return null if no catalog configured
+  if (!config.catalog || config.catalog.length === 0) {
+    return null;
+  }
 
-  for (const category of categories) {
-    if (containsAny(normalized, category.names)) {
-      return category.value;
+  // Try to match against actual categories in the catalog
+  for (const category of config.catalog) {
+    const normalizedCategory = normalize(category.category);
+
+    // Check if message contains the category name (fuzzy match)
+    if (normalized.includes(normalizedCategory) || normalizedCategory.includes(normalized)) {
+      return category.category;
     }
   }
 

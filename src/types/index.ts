@@ -120,6 +120,10 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  // Clothing-specific fields (optional, only populated for clothing orders)
+  size?: string;
+  color?: string;
+  gender?: string;
 }
 
 export interface Order {
@@ -140,6 +144,13 @@ export interface ConversationWithMessages extends Conversation {
   messages: Message[];
   client?: Client;
   order?: Order;
+}
+
+export interface OrderUpdateResponse extends Order {
+  notification: {
+    status: 'sent' | 'failed' | 'skipped';
+    error?: string;
+  };
 }
 
 export interface ConversationListItem {

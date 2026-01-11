@@ -57,129 +57,152 @@ export { messageQueue };
 const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
   const { from, to, content: originalContent, isAudio, mediaUrl } = job.data;
 
-  console.log(`Processing WhatsApp message from ${from} to ${to}`);
+  try {
+    console.log(`Processing WhatsApp message from ${from} to ${to}`);
 
-  // 1. Find client by WhatsApp number
-  const client = await clientService.findClientByWhatsAppNumber(to);
+    // 1. Find client by WhatsApp number
+    const client = await clientService.findClientByWhatsAppNumber(to);
 
-  if (!client) {
-    console.error(`No active client found for WhatsApp number: ${to}`);
-    return;
-  }
-
-  // 2. Find or create conversation
-  const conversation = await conversationService.findOrCreateConversation(
-    client.id,
-    from
-  );
-
-  // Set flowType based on client segment on first message if not set
-  if (!conversation.flowType) {
-    const flowType = client.segment; // 'delivery' or 'clothing' from client config
-    await conversationService.updateFlowType(conversation.id, flowType);
-    conversation.flowType = flowType;
-    conversation.currentState = 'greeting';
-    conversation.collectedData = {};
-  }
-
-  // 3. Handle audio transcription if needed
-  let content = originalContent;
-  if (isAudio && mediaUrl) {
-    console.log('Transcribing audio message...');
-    const transcription = await audioService.processAudioMessage(mediaUrl);
-
-    if (!transcription) {
-      // Transcription failed - ask user to type
-      const fallbackMessage = 'Não consegui entender o áudio. Pode escrever?';
-      await twilioService.sendWhatsAppMessage(from, fallbackMessage);
-
-      await messageService.createMessage(
-        conversation.id,
-        'incoming',
-        '[Audio transcription failed]',
-        'audio'
-      );
-
-      await messageService.createMessage(
-        conversation.id,
-        'outgoing',
-        fallbackMessage,
-        'text'
-      );
-
+    if (!client) {
+      console.error(`No active client found for WhatsApp number: ${to}`);
       return;
     }
 
-    content = transcription;
-    console.log('Audio transcribed:', content);
-  }
-
-  // 4. Save incoming message
-  await messageService.createMessage(
-    conversation.id,
-    'incoming',
-    content,
-    isAudio ? 'audio' : 'text'
-  );
-
-  // 5. Process through flow engine
-  const flowResponse = flowEngine.processMessage(
-    conversation,
-    content,
-    client.configuration
-  );
-
-  // 6. Handle human transfer
-  if (flowResponse.shouldTransfer && flowResponse.transferReason) {
-    await conversationService.transferToHuman(
-      conversation.id,
-      flowResponse.transferReason
-    );
-  }
-
-  // 7. Create order if confirmed (delivery flow)
-  if (flowResponse.shouldCreateOrder && flowResponse.collectedData.items) {
-    await orderService.createOrder(
-      conversation.id,
+    // 2. Find or create conversation
+    const conversation = await conversationService.findOrCreateConversation(
       client.id,
+      from
+    );
+
+    // Set flowType based on client segment on first message if not set
+    if (!conversation.flowType) {
+      const flowType = client.segment; // 'delivery' or 'clothing' from client config
+      await conversationService.updateFlowType(conversation.id, flowType);
+      conversation.flowType = flowType;
+      conversation.currentState = 'greeting';
+      conversation.collectedData = {};
+    }
+
+    // 3. Handle audio transcription if needed
+    let content = originalContent;
+    if (isAudio && mediaUrl) {
+      console.log('Transcribing audio message...');
+      const transcription = await audioService.processAudioMessage(mediaUrl);
+
+      if (!transcription) {
+        // Transcription failed - ask user to type
+        const fallbackMessage = 'Não consegui entender o áudio. Pode escrever?';
+        await twilioService.sendWhatsAppMessage(from, fallbackMessage);
+
+        await messageService.createMessage(
+          conversation.id,
+          'incoming',
+          '[Audio transcription failed]',
+          'audio'
+        );
+
+        await messageService.createMessage(
+          conversation.id,
+          'outgoing',
+          fallbackMessage,
+          'text'
+        );
+
+        return;
+      }
+
+      content = transcription;
+      console.log('Audio transcribed:', content);
+    }
+
+    // 4. Save incoming message
+    await messageService.createMessage(
+      conversation.id,
+      'incoming',
+      content,
+      isAudio ? 'audio' : 'text'
+    );
+
+    // 5. Process through flow engine
+    const flowResponse = flowEngine.processMessage(
+      conversation,
+      content,
+      client.configuration
+    );
+
+    // 6. Handle human transfer
+    if (flowResponse.shouldTransfer && flowResponse.transferReason) {
+      await conversationService.transferToHuman(
+        conversation.id,
+        flowResponse.transferReason
+      );
+    }
+
+    // 7. Create order if confirmed (delivery flow)
+    if (flowResponse.shouldCreateOrder && flowResponse.collectedData.items) {
+      await orderService.createOrder(
+        conversation.id,
+        client.id,
+        flowResponse.collectedData
+      );
+
+      // Mark conversation as completed
+      await conversationService.markCompleted(conversation.id);
+    }
+
+    // 7b. Create reservation if confirmed (clothing flow)
+    if (flowResponse.shouldCreateReservation && flowResponse.collectedData.product) {
+      await orderService.createOrder(
+        conversation.id,
+        client.id,
+        flowResponse.collectedData
+      );
+
+      // Mark conversation as completed
+      await conversationService.markCompleted(conversation.id);
+    }
+
+    // 8. Update conversation state
+    await conversationService.updateState(
+      conversation.id,
+      flowResponse.newState,
       flowResponse.collectedData
     );
 
-    // Mark conversation as completed
-    await conversationService.markCompleted(conversation.id);
-  }
+    // 9. Send bot response
+    await twilioService.sendWhatsAppMessage(from, flowResponse.response);
 
-  // 7b. Create reservation if confirmed (clothing flow)
-  if (flowResponse.shouldCreateReservation && flowResponse.collectedData.product) {
-    await orderService.createOrder(
+    // 10. Save outgoing message
+    await messageService.createMessage(
       conversation.id,
-      client.id,
-      flowResponse.collectedData
+      'outgoing',
+      flowResponse.response,
+      'text'
     );
 
-    // Mark conversation as completed
-    await conversationService.markCompleted(conversation.id);
+    console.log(`Message processed successfully for conversation ${conversation.id}`);
+  } catch (error: any) {
+    console.error('Error processing WhatsApp message:', {
+      from,
+      to,
+      error: error.message,
+      stack: error.stack,
+      jobId: job.id
+    });
+
+    // Try to send error message to customer
+    try {
+      await twilioService.sendWhatsAppMessage(
+        from,
+        'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns minutos.'
+      );
+    } catch (twilioError: any) {
+      console.error('Failed to send error message to customer:', twilioError.message);
+    }
+
+    // Re-throw to let BullMQ retry mechanism handle it
+    throw error;
   }
-
-  // 8. Update conversation state
-  await conversationService.updateState(
-    conversation.id,
-    flowResponse.newState,
-    flowResponse.collectedData
-  );
-
-  // 9. Send bot response
-  await twilioService.sendWhatsAppMessage(from, flowResponse.response);
-
-  // 10. Save outgoing message
-  await messageService.createMessage(
-    conversation.id,
-    'outgoing',
-    flowResponse.response,
-    'text'
-  );
-
-  console.log(`Message processed successfully for conversation ${conversation.id}`);
 };
 
 // Create the worker (optional - only if Redis not explicitly disabled)
@@ -222,10 +245,49 @@ export const addMessageToQueue = async (data: WhatsAppMessageJob): Promise<void>
 };
 
 // Initialize queue (call on server start)
-export const initializeMessageQueue = (): void => {
+export const initializeMessageQueue = async (): Promise<void> => {
+  // If Redis is explicitly disabled, just log and return
+  if (REDIS_DISABLED) {
+    console.log('✅ Redis explicitly disabled via DISABLE_REDIS=true');
+    console.log('⚠️  WhatsApp functionality will NOT work');
+    return;
+  }
+
+  // If we got here, Redis should be available
   if (messageQueue && messageWorker) {
-    console.log('Message queue initialized with Redis');
+    // Test Redis connection by adding a test job
+    try {
+      await messageQueue.add('health-check', {
+        from: 'health-check',
+        to: 'health-check',
+        content: 'health-check',
+        isAudio: false
+      }, {
+        removeOnComplete: true,
+        removeOnFail: true
+      });
+      console.log('✅ Message queue initialized with Redis');
+      console.log('✅ WhatsApp functionality is ACTIVE');
+    } catch (error: any) {
+      console.error('❌ Redis connection test failed:', error.message);
+
+      // In production, FAIL FAST - refuse to start
+      if (process.env.NODE_ENV === 'production') {
+        console.error('❌ CRITICAL: Refusing to start server without Redis in production');
+        console.error('❌ Set DISABLE_REDIS=true in .env if you want to start without WhatsApp functionality');
+        throw new Error('Redis connection failed in production environment');
+      } else {
+        console.warn('⚠️  Development mode: Server will start but WhatsApp will NOT work');
+      }
+    }
   } else {
-    console.log('Message queue initialized WITHOUT Redis - WhatsApp functionality disabled');
+    console.warn('⚠️  Message queue NOT initialized - Redis not available');
+    console.warn('⚠️  WhatsApp functionality is DISABLED');
+
+    // In production, this is a critical failure
+    if (process.env.NODE_ENV === 'production') {
+      console.error('❌ CRITICAL: Cannot start without Redis in production');
+      throw new Error('Redis not available in production environment');
+    }
   }
 };

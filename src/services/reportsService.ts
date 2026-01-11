@@ -41,21 +41,20 @@ export interface TopItem {
 
 /**
  * Get overview metrics for a date range
+ * CRITICAL: clientId is REQUIRED for multi-client data isolation
  */
 export const getOverviewMetrics = async (
   startDate: Date,
   endDate: Date,
-  clientId?: number
+  clientId: number
 ): Promise<OverviewMetrics> => {
+  // CRITICAL: ALWAYS filter by clientId for data isolation
   const whereClause: any = {
+    clientId,
     startedAt: {
       [Op.between]: [startDate, endDate]
     }
   };
-
-  if (clientId) {
-    whereClause.clientId = clientId;
-  }
 
   // Conversations started
   const conversationsStarted = await Conversation.count({
@@ -79,15 +78,13 @@ export const getOverviewMetrics = async (
   });
 
   // Average ticket value
+  // CRITICAL: ALWAYS filter by clientId for data isolation
   const orderWhereClause: any = {
+    clientId,
     createdAt: {
       [Op.between]: [startDate, endDate]
     }
   };
-
-  if (clientId) {
-    orderWhereClause.clientId = clientId;
-  }
 
   const orders = await Order.findAll({
     where: orderWhereClause,
@@ -107,13 +104,16 @@ export const getOverviewMetrics = async (
 
 /**
  * Get payment methods breakdown
+ * CRITICAL: clientId is REQUIRED for multi-client data isolation
  */
 export const getPaymentMethodsBreakdown = async (
   startDate: Date,
   endDate: Date,
-  clientId?: number
+  clientId: number
 ): Promise<PaymentMethodBreakdown[]> => {
+  // CRITICAL: ALWAYS filter by clientId for data isolation
   const whereClause: any = {
+    clientId,
     createdAt: {
       [Op.between]: [startDate, endDate]
     },
@@ -121,10 +121,6 @@ export const getPaymentMethodsBreakdown = async (
       [Op.ne]: null
     }
   };
-
-  if (clientId) {
-    whereClause.clientId = clientId;
-  }
 
   const orders = await Order.findAll({
     where: whereClause,
@@ -147,21 +143,20 @@ export const getPaymentMethodsBreakdown = async (
 
 /**
  * Get peak hours (when most conversations start)
+ * CRITICAL: clientId is REQUIRED for multi-client data isolation
  */
 export const getPeakHours = async (
   startDate: Date,
   endDate: Date,
-  clientId?: number
+  clientId: number
 ): Promise<PeakHour[]> => {
+  // CRITICAL: ALWAYS filter by clientId for data isolation
   const whereClause: any = {
+    clientId,
     startedAt: {
       [Op.between]: [startDate, endDate]
     }
   };
-
-  if (clientId) {
-    whereClause.clientId = clientId;
-  }
 
   const conversations = await Conversation.findAll({
     where: whereClause,
@@ -188,21 +183,20 @@ export const getPeakHours = async (
 
 /**
  * Get top requested items/products
+ * CRITICAL: clientId is REQUIRED for multi-client data isolation
  */
 export const getTopItems = async (
   startDate: Date,
   endDate: Date,
-  clientId?: number
+  clientId: number
 ): Promise<TopItem[]> => {
+  // CRITICAL: ALWAYS filter by clientId for data isolation
   const whereClause: any = {
+    clientId,
     createdAt: {
       [Op.between]: [startDate, endDate]
     }
   };
-
-  if (clientId) {
-    whereClause.clientId = clientId;
-  }
 
   const orders = await Order.findAll({
     where: whereClause,
@@ -231,12 +225,14 @@ export const getTopItems = async (
 
 /**
  * Export reports data to CSV format
+ * CRITICAL: clientId is REQUIRED for multi-client data isolation
  */
 export const exportToCSV = async (
   startDate: Date,
   endDate: Date,
-  clientId?: number
+  clientId: number
 ): Promise<string> => {
+  // All called functions now require clientId - data isolation enforced
   const overview = await getOverviewMetrics(startDate, endDate, clientId);
   const paymentMethods = await getPaymentMethodsBreakdown(startDate, endDate, clientId);
   const topItems = await getTopItems(startDate, endDate, clientId);
@@ -257,7 +253,7 @@ export const exportToCSV = async (
   csv += 'Métodos de Pagamento\n';
   csv += 'Método,Quantidade\n';
   paymentMethods.forEach(pm => {
-    csv += `${pm.method},${pm.count}\n`;
+    csv += `"${pm.method}",${pm.count}\n`;
   });
   csv += '\n';
 
@@ -265,7 +261,7 @@ export const exportToCSV = async (
   csv += 'Itens Mais Pedidos\n';
   csv += 'Item,Quantidade\n';
   topItems.forEach(item => {
-    csv += `${item.name},${item.count}\n`;
+    csv += `"${item.name}",${item.count}\n`;
   });
 
   return csv;

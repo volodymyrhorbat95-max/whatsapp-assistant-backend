@@ -11,8 +11,14 @@ export const getAllConversations = async (filters?: {
   endDate?: Date;
   status?: string;
   converted?: boolean;
+  clientId?: number;
 }): Promise<ConversationListItem[]> => {
   const whereClause: any = {};
+
+  // CRITICAL: Filter by clientId for multi-client data isolation
+  if (filters?.clientId) {
+    whereClause.clientId = filters.clientId;
+  }
 
   if (filters?.startDate && filters?.endDate) {
     whereClause.startedAt = {
@@ -24,19 +30,38 @@ export const getAllConversations = async (filters?: {
     whereClause.status = filters.status;
   }
 
+  // Bug #4 Fix: Optimized conversion filter using JOIN instead of N+1 queries
+  const includeModels: any[] = [
+    {
+      model: Client,
+      as: 'client',
+      attributes: ['id', 'name', 'segment']
+    }
+  ];
+
+  // Add Order association for conversion filtering
+  if (filters?.converted !== undefined) {
+    includeModels.push({
+      model: Order,
+      as: 'order',
+      required: filters.converted, // INNER JOIN if converted=true, LEFT JOIN if converted=false
+      attributes: ['id'] // Only need to know if order exists
+    });
+  }
+
   const conversations = await Conversation.findAll({
     where: whereClause,
-    include: [
-      {
-        model: Client,
-        as: 'client',
-        attributes: ['id', 'name', 'segment']
-      }
-    ],
+    include: includeModels,
     order: [['lastMessageAt', 'DESC']]
   });
 
-  let results = conversations.map((conv) => ({
+  // Filter out conversations without orders when converted=false
+  let results = conversations;
+  if (filters?.converted === false) {
+    results = conversations.filter(conv => !conv.get('order'));
+  }
+
+  return results.map((conv) => ({
     id: conv.id,
     clientId: conv.clientId,
     customerPhone: conv.customerPhone,
@@ -45,28 +70,6 @@ export const getAllConversations = async (filters?: {
     lastMessageAt: conv.lastMessageAt,
     client: conv.get('client') as ConversationListItem['client']
   }));
-
-  // Filter by converted if specified
-  if (filters?.converted !== undefined) {
-    const conversationIds = results.map(c => c.id);
-    const orders = await Order.findAll({
-      where: {
-        conversationId: {
-          [Op.in]: conversationIds
-        }
-      },
-      attributes: ['conversationId']
-    });
-
-    const convertedIds = new Set(orders.map(o => o.conversationId));
-
-    results = results.filter(conv => {
-      const hasOrder = convertedIds.has(conv.id);
-      return filters.converted ? hasOrder : !hasOrder;
-    });
-  }
-
-  return results;
 };
 
 // Get single conversation with all messages and order
@@ -75,8 +78,7 @@ export const getConversationById = async (id: number): Promise<ConversationWithM
     include: [
       {
         model: Message,
-        as: 'messages',
-        order: [['createdAt', 'ASC']]
+        as: 'messages'
       },
       {
         model: Client,
@@ -86,7 +88,9 @@ export const getConversationById = async (id: number): Promise<ConversationWithM
         model: Order,
         as: 'order'
       }
-    ]
+    ],
+    // CRITICAL FIX: Correct Sequelize syntax for ordering nested associations
+    order: [[{ model: Message, as: 'messages' }, 'createdAt', 'ASC']]
   });
 
   if (!conversation) {
@@ -117,27 +121,26 @@ export const findOrCreateConversation = async (
   clientId: number,
   customerPhone: string
 ): Promise<Conversation> => {
-  // Look for an existing ongoing conversation (within last 24 hours)
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-  let conversation = await Conversation.findOne({
+  // Use findOrCreate to avoid race condition
+  // This is atomic and prevents duplicate conversations from simultaneous messages
+  const [conversation, created] = await Conversation.findOrCreate({
     where: {
       clientId,
       customerPhone,
       status: 'ongoing'
     },
-    order: [['lastMessageAt', 'DESC']]
-  });
-
-  // If no ongoing conversation, create a new one
-  if (!conversation) {
-    conversation = await Conversation.create({
+    defaults: {
       clientId,
       customerPhone,
       status: 'ongoing',
       startedAt: new Date(),
       lastMessageAt: new Date()
-    });
+    }
+  });
+
+  // If conversation already existed, update the timestamp
+  if (!created) {
+    await conversation.update({ lastMessageAt: new Date() });
   }
 
   return conversation;
