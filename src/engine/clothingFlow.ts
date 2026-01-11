@@ -317,8 +317,37 @@ export const processClothingFlow = (
       const paymentMethod = parser.parsePayment(message);
 
       if (!paymentMethod) {
+        // Generate dynamic payment options message based on accepted methods
+        const acceptedMethods = config.paymentMethods || ['pix', 'card', 'cash'];
+        const methodNames: { [key: string]: string } = {
+          pix: 'Pix',
+          card: 'Cartão',
+          cash: 'Dinheiro'
+        };
+        const acceptedNames = acceptedMethods.map(m => methodNames[m]).join(', ');
+
         return {
-          response: 'Não entendi. Forma de pagamento: Pix, Cartão ou Dinheiro?',
+          response: `Não entendi. Forma de pagamento: ${acceptedNames}?`,
+          newState: 'asking_payment',
+          collectedData,
+          shouldTransfer: false,
+          shouldCreateReservation: false
+        };
+      }
+
+      // ✅ Validate payment method is accepted by this client
+      const acceptedMethods = config.paymentMethods || ['pix', 'card', 'cash'];
+
+      if (!acceptedMethods.includes(paymentMethod)) {
+        const methodNames: { [key: string]: string } = {
+          pix: 'Pix',
+          card: 'Cartão',
+          cash: 'Dinheiro'
+        };
+        const acceptedNames = acceptedMethods.map(m => methodNames[m]).join(', ');
+
+        return {
+          response: `Desculpe, não aceitamos ${methodNames[paymentMethod]}. Aceitamos: ${acceptedNames}.`,
           newState: 'asking_payment',
           collectedData,
           shouldTransfer: false,

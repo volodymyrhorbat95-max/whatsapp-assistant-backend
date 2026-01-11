@@ -4,6 +4,7 @@
 import { Conversation, ClientConfiguration, CollectedData } from '../types';
 import * as deliveryFlow from './deliveryFlow';
 import * as clothingFlow from './clothingFlow';
+import { isWithinOperatingHours, getClosedMessage } from './operatingHoursChecker';
 
 export interface FlowEngineResponse {
   response: string;
@@ -30,6 +31,17 @@ export const processMessage = (
   const currentState = conversation.currentState;
   const collectedData = conversation.collectedData || {};
   const flowType = conversation.flowType;
+
+  // Check operating hours FIRST - before processing any flow
+  if (!isWithinOperatingHours(config)) {
+    return {
+      response: getClosedMessage(config),
+      newState: currentState || 'greeting',
+      collectedData,
+      shouldTransfer: false,
+      shouldCreateOrder: false
+    };
+  }
 
   // Determine flow type if not set (first message)
   // For now, default to delivery. Clothing flow will be added in Checkpoint 3

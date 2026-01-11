@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import sequelize from './database/models';
 import routes from './routes';
 import { initializeMessageQueue } from './jobs/messageQueue';
+import { startAbandonmentDetection, stopAbandonmentDetection } from './jobs/abandonmentDetector';
 import { globalLimiter } from './middleware/rateLimiter';
 
 // Load environment variables
@@ -142,6 +143,9 @@ const startServer = async () => {
     // Initialize message queue (now async with fail-fast)
     await initializeMessageQueue();
 
+    // Start abandonment detection job
+    startAbandonmentDetection();
+
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -150,5 +154,18 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  stopAbandonmentDetection();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  stopAbandonmentDetection();
+  process.exit(0);
+});
 
 startServer();

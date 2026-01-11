@@ -32,6 +32,7 @@ export interface CustomMessages {
   confirmation?: string;
   farewell?: string;
   fallback?: string;
+  closedMessage?: string;
 }
 
 // Financial health - costs for margin estimation

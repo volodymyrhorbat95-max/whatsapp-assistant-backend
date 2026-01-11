@@ -4,8 +4,12 @@ import conversationRoutes from './conversationRoutes';
 import clientRoutes from './clientRoutes';
 import reportsRoutes from './reportsRoutes';
 import orderRoutes from './orderRoutes';
+import healthRoutes from './healthRoutes';
 
 const router = Router();
+
+// Health check routes (no auth required)
+router.use('/health', healthRoutes);
 
 // Webhook routes (Twilio)
 router.use('/webhook', webhookRoutes);
