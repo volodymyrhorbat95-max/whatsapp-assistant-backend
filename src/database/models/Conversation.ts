@@ -1,18 +1,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from './index';
 import Client from './Client';
-
-// Interface for collected data during flow
-interface CollectedData {
-  items?: Array<{
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
-  address?: string;
-  paymentMethod?: 'pix' | 'card' | 'cash';
-  [key: string]: any;
-}
+import { CollectedData } from '../../types';
 
 // Interface matching database schema
 interface ConversationAttributes {

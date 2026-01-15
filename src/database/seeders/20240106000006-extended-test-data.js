@@ -121,7 +121,15 @@ module.exports = {
           totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
           address = data.address;
         } else if (data.product) {
-          items = [{name: `${data.product.name} - ${data.product.size}`, price: data.product.price, quantity: 1}];
+          // Clothing orders - include separate size, color, gender fields
+          items = [{
+            name: data.product.name,
+            price: data.product.price,
+            quantity: 1,
+            size: data.product.size,
+            color: data.product.color,
+            gender: data.product.gender
+          }];
           totalAmount = data.product.price;
           address = data.deliveryType === 'delivery' ? data.address : null;
         }

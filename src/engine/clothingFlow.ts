@@ -136,7 +136,7 @@ export const processClothingFlow = (
 
       // Step 2 continued: What size?
       return {
-        response: 'Qual tamanho? (PP, P, M, G, GG, XG)',
+        response: 'Qual tamanho? (PP, P, M, G, GG, XG ou número)',
         newState: 'asking_size',
         collectedData: updatedData,
         shouldTransfer: false,
@@ -146,11 +146,14 @@ export const processClothingFlow = (
 
     case 'asking_size': {
       const normalized = message.toLowerCase().trim();
-      const sizeMatch = normalized.match(/\b(pp|p|m|g|gg|xg)\b/);
 
-      if (!sizeMatch) {
+      // Match letter sizes (PP, P, M, G, GG, XG) OR numeric sizes (1-60 for adults/kids)
+      const letterSizeMatch = normalized.match(/\b(pp|p|m|g|gg|xg)\b/);
+      const numericSizeMatch = normalized.match(/\b([1-9]|[1-5][0-9]|60)\b/);
+
+      if (!letterSizeMatch && !numericSizeMatch) {
         return {
-          response: 'Não entendi o tamanho. Pode escolher: PP, P, M, G, GG ou XG?',
+          response: 'Não entendi o tamanho. Pode escolher: PP, P, M, G, GG, XG ou número?',
           newState: 'asking_size',
           collectedData,
           shouldTransfer: false,
@@ -158,7 +161,8 @@ export const processClothingFlow = (
         };
       }
 
-      const size = sizeMatch[1].toUpperCase();
+      // Use letter size if matched, otherwise use numeric size
+      const size = letterSizeMatch ? letterSizeMatch[1].toUpperCase() : numericSizeMatch![1];
       const updatedData = {
         ...collectedData,
         product: {
@@ -491,9 +495,9 @@ function findMatchingProducts(
 
       // Match by product type
       if (searchType && (itemNameLower.includes(searchType) || searchType.includes(itemNameLower))) {
-        // Match by gender if specified
+        // Match by gender if specified (case-insensitive)
         if (searchCriteria.gender && item.gender) {
-          if (item.gender !== searchCriteria.gender) {
+          if (item.gender.toLowerCase() !== searchCriteria.gender.toLowerCase()) {
             continue;
           }
         }

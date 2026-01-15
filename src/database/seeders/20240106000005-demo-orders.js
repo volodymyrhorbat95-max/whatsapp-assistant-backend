@@ -67,14 +67,14 @@ module.exports = {
           });
         }
       } else if (conv.segment === 'clothing') {
-        // Clothing orders
+        // Clothing orders - include size, color, gender fields
         if (conv.customer_phone === '+5511967890123') {
           orders.push({
             conversation_id: conv.id,
             client_id: conv.client_id,
             status: 'preparing',
             items: JSON.stringify([
-              { name: 'Camiseta Básica Preta - M', price: 45, quantity: 1 }
+              { name: 'Camiseta Básica Preta', price: 45, quantity: 1, size: 'M', color: 'preta', gender: 'masculino' }
             ]),
             total_amount: 45.00,
             delivery_address: 'Rua Augusta, 789 - Consolação',
@@ -88,10 +88,10 @@ module.exports = {
             client_id: conv.client_id,
             status: 'confirmed',
             items: JSON.stringify([
-              { name: 'Vestido Floral rosa - P', price: 120, quantity: 1 }
+              { name: 'Vestido Floral', price: 120, quantity: 1, size: 'P', color: 'rosa', gender: 'feminino' }
             ]),
             total_amount: 120.00,
-            delivery_address: null, // Pickup
+            delivery_address: 'Retirar na loja', // Pickup - explicit text
             payment_method: 'card',
             created_at: twoDaysAgo,
             updated_at: twoDaysAgo
