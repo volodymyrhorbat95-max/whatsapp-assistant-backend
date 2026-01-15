@@ -168,4 +168,56 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+// ============================================================
+// CRITICAL: Global error handlers to prevent server crashes
+// Ensures 24/7 operation by catching unhandled exceptions
+// ============================================================
+
+/**
+ * Handle uncaught exceptions - log and continue running
+ * These are synchronous errors that weren't caught by try/catch
+ */
+process.on('uncaughtException', (error: Error) => {
+  console.error('='.repeat(60));
+  console.error('UNCAUGHT EXCEPTION - Server will attempt to continue');
+  console.error('='.repeat(60));
+  console.error('Error:', error.message);
+  console.error('Stack:', error.stack);
+  console.error('='.repeat(60));
+
+  // Log to external monitoring if configured
+  // In production, this would send to a monitoring service like Sentry
+
+  // Note: We do NOT exit the process here to maintain 24/7 operation
+  // The specific request that caused this will fail, but the server continues
+});
+
+/**
+ * Handle unhandled promise rejections - log and continue running
+ * These are async errors that weren't caught by .catch() or try/catch
+ */
+process.on('unhandledRejection', (reason: any, _promise: Promise<any>) => {
+  console.error('='.repeat(60));
+  console.error('UNHANDLED PROMISE REJECTION - Server will continue');
+  console.error('='.repeat(60));
+  console.error('Reason:', reason?.message || reason);
+  console.error('Stack:', reason?.stack || 'No stack trace available');
+  console.error('='.repeat(60));
+
+  // Note: We do NOT exit the process here to maintain 24/7 operation
+});
+
+/**
+ * Handle warnings (e.g., deprecation warnings, memory warnings)
+ */
+process.on('warning', (warning: Error) => {
+  console.warn('='.repeat(60));
+  console.warn('PROCESS WARNING');
+  console.warn('='.repeat(60));
+  console.warn('Name:', warning.name);
+  console.warn('Message:', warning.message);
+  console.warn('Stack:', warning.stack);
+  console.warn('='.repeat(60));
+});
+
 startServer();

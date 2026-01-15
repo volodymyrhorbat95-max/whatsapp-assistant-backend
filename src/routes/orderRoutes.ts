@@ -25,14 +25,35 @@ const STATUS_MESSAGES: Record<OrderStatus, string> = {
 /**
  * GET /api/orders/:id
  * Get single order by ID
+ * SECURITY: Requires clientId query parameter to prevent cross-client data access
  */
 router.get('/:id', requireAuth, validateId('id'), async (req: Request, res: Response): Promise<void> => {
   try {
     const orderId = parseInt(req.params.id, 10);
+    const clientId = req.query.clientId ? parseInt(req.query.clientId as string, 10) : undefined;
+
+    // CRITICAL: clientId is required for multi-client data isolation
+    if (!clientId || isNaN(clientId)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'clientId query parameter is required'
+      });
+      return;
+    }
+
     const order = await orderService.getOrderById(orderId);
 
     if (!order) {
       res.status(404).json({ error: 'Order not found' });
+      return;
+    }
+
+    // CRITICAL: Verify order belongs to the specified client
+    if (order.clientId !== clientId) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'This order does not belong to the specified client'
+      });
       return;
     }
 

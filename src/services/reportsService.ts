@@ -105,6 +105,7 @@ export const getOverviewMetrics = async (
 /**
  * Get payment methods breakdown
  * CRITICAL: clientId is REQUIRED for multi-client data isolation
+ * Returns ALL payment methods (pix, card, cash) even if count is 0 for proper chart display
  */
 export const getPaymentMethodsBreakdown = async (
   startDate: Date,
@@ -127,23 +128,36 @@ export const getPaymentMethodsBreakdown = async (
     attributes: ['paymentMethod']
   });
 
-  // Count by payment method
+  // Initialize all payment methods with 0 count
+  // This ensures all methods appear in the chart even with no orders
+  const allMethods = ['pix', 'card', 'cash'];
   const counts: { [key: string]: number } = {};
-  orders.forEach(order => {
-    const method = order.paymentMethod || 'unknown';
-    counts[method] = (counts[method] || 0) + 1;
+  allMethods.forEach(method => {
+    counts[method] = 0;
   });
 
-  // Convert to array
-  return Object.entries(counts).map(([method, count]) => ({
+  // Count orders by payment method
+  orders.forEach(order => {
+    const method = order.paymentMethod || 'unknown';
+    if (counts[method] !== undefined) {
+      counts[method]++;
+    } else {
+      // Handle unexpected payment methods gracefully
+      counts[method] = 1;
+    }
+  });
+
+  // Convert to array in consistent order
+  return allMethods.map(method => ({
     method,
-    count
+    count: counts[method]
   }));
 };
 
 /**
  * Get peak hours (when most conversations start)
  * CRITICAL: clientId is REQUIRED for multi-client data isolation
+ * Returns ALL 24 hours (0-23) sorted in order for proper chart display
  */
 export const getPeakHours = async (
   startDate: Date,
@@ -163,22 +177,22 @@ export const getPeakHours = async (
     attributes: ['startedAt']
   });
 
-  // Count by hour (0-23)
-  const hourCounts: { [hour: number]: number } = {};
+  // Initialize array with all 24 hours (0-23) with count 0
+  // Using array ensures correct order (Object.entries doesn't guarantee order for numeric keys)
+  const peakHours: PeakHour[] = [];
   for (let i = 0; i < 24; i++) {
-    hourCounts[i] = 0;
+    peakHours.push({ hour: i, count: 0 });
   }
 
+  // Count conversations by hour
   conversations.forEach(conv => {
     const hour = new Date(conv.startedAt).getHours();
-    hourCounts[hour]++;
+    if (hour >= 0 && hour < 24) {
+      peakHours[hour].count++;
+    }
   });
 
-  // Convert to array
-  return Object.entries(hourCounts).map(([hour, count]) => ({
-    hour: parseInt(hour, 10),
-    count
-  }));
+  return peakHours;
 };
 
 /**

@@ -81,12 +81,14 @@ export const createOrder = async (
       (collectedData.deliveryType === 'pickup' ? 'Retirar na loja' : null);
 
     // Create order
-    // Order starts as 'pending' per requirements (Line 81): "The order was just created but not yet confirmed by the customer"
-    // Business owner must confirm in dashboard to change to 'confirmed'
+    // Order starts as 'confirmed' because createOrder is only called AFTER customer explicitly confirms ("sim"/"yes")
+    // Per requirements (Line 73-75): "The customer must say 'yes' or 'sim' for the order to proceed.
+    // Only after receiving this explicit confirmation does the system create the order in the database."
+    // The order status then progresses: confirmed → preparing → out_for_delivery → delivered
     const order = await Order.create({
       conversationId,
       clientId,
-      status: 'pending',
+      status: 'confirmed',
       items,
       totalAmount,
       deliveryAddress,

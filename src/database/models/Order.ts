@@ -4,10 +4,15 @@ import Conversation from './Conversation';
 import Client from './Client';
 
 // OrderItem interface matching types/index.ts
+// MUST include optional clothing-specific fields for clothing store orders
 interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  // Clothing-specific fields (optional, only populated for clothing orders)
+  size?: string;
+  color?: string;
+  gender?: string;
 }
 
 // Interface matching database schema
@@ -24,7 +29,9 @@ interface OrderAttributes {
   updatedAt: Date;
 }
 
-interface OrderCreationAttributes extends Optional<OrderAttributes, 'id' | 'status' | 'items' | 'totalAmount' | 'deliveryAddress' | 'paymentMethod' | 'createdAt' | 'updatedAt'> {}
+// Note: 'status' is NOT optional - it must always be explicitly set when creating an order
+// This enforces the requirement that orders only exist after customer confirmation
+interface OrderCreationAttributes extends Optional<OrderAttributes, 'id' | 'items' | 'totalAmount' | 'deliveryAddress' | 'paymentMethod' | 'createdAt' | 'updatedAt'> {}
 
 class Order extends Model<OrderAttributes, OrderCreationAttributes> implements OrderAttributes {
   public id!: number;
@@ -66,8 +73,9 @@ Order.init(
     },
     status: {
       type: DataTypes.ENUM('pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'),
-      allowNull: false,
-      defaultValue: 'pending'
+      allowNull: false
+      // No defaultValue: Per requirements, orders are ONLY created after customer confirms
+      // The orderService.createOrder() always sets status to 'confirmed' explicitly
     },
     items: {
       type: DataTypes.JSONB,

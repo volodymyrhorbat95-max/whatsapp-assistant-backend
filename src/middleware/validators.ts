@@ -289,7 +289,7 @@ export const validateClientConfiguration = (req: Request, res: Response, next: N
       return;
     }
 
-    const validMessageKeys = ['greeting', 'confirmation', 'farewell', 'fallback'];
+    const validMessageKeys = ['greeting', 'confirmation', 'farewell', 'fallback', 'closedMessage'];
     for (const key in configuration.messages) {
       if (!validMessageKeys.includes(key)) {
         res.status(400).json({

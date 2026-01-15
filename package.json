@@ -14,12 +14,14 @@
     "db:seed:undo": "sequelize-cli db:seed:undo:all"
   },
   "dependencies": {
+    "axios": "^1.6.5",
     "bullmq": "^5.1.1",
     "cors": "^2.8.5",
     "cron": "^3.1.7",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
+    "form-data": "^4.0.0",
     "helmet": "^8.1.0",
     "ioredis": "^5.3.2",
     "pg": "^8.11.3",
@@ -31,6 +33,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.6",
+    "@types/cron": "^2.4.0",
     "sequelize-cli": "^6.6.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"

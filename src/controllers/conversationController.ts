@@ -80,9 +80,11 @@ export const getAllConversations = async (req: Request, res: Response): Promise<
 };
 
 // GET /api/conversations/:id
+// CRITICAL: clientId query param is required for multi-client data isolation
 export const getConversationById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const { clientId } = req.query;
     const conversationId = parseInt(id, 10);
 
     // Validate ID is a number
@@ -91,10 +93,37 @@ export const getConversationById = async (req: Request, res: Response): Promise<
       return;
     }
 
+    // CRITICAL: clientId is required for multi-client data isolation
+    if (!clientId) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'clientId query parameter is required'
+      });
+      return;
+    }
+
+    const parsedClientId = parseInt(clientId as string, 10);
+    if (isNaN(parsedClientId)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'clientId must be a valid number'
+      });
+      return;
+    }
+
     const conversation = await conversationService.getConversationById(conversationId);
 
     if (!conversation) {
       res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    // CRITICAL: Verify conversation belongs to the specified client
+    if (conversation.clientId !== parsedClientId) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'This conversation does not belong to the specified client'
+      });
       return;
     }
 
