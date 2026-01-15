@@ -231,7 +231,9 @@ export const processClothingFlow = (
         };
       }
 
-      let responseText = 'Temos essas opções:\n\n';
+      // CRITICAL: Use configurable header (Predictable, Deterministic Responses requirement)
+      const optionsHeader = config.messages?.optionsHeader || 'Temos essas opções:';
+      let responseText = `${optionsHeader}\n\n`;
       options.forEach((opt, idx) => {
         let itemDesc = `${idx + 1}. ${opt.name}`;
         if (opt.color) itemDesc += ` - ${opt.color}`;
@@ -297,8 +299,13 @@ export const processClothingFlow = (
       };
 
       // Step 5: Bot asks: Pickup at store or delivery?
+      // CRITICAL: Use configurable message (Predictable, Deterministic Responses requirement)
+      const productSelectedTemplate = config.messages?.productSelected || 'Ótimo! {product} por R$ {price}.';
+      const productSelectedMsg = productSelectedTemplate
+        .replace('{product}', selectedProduct.name)
+        .replace('{price}', selectedProduct.price.toFixed(2));
       return {
-        response: `Ótimo! ${selectedProduct.name} por R$ ${selectedProduct.price.toFixed(2)}.\n\n${msg.askDeliveryType}`,
+        response: `${productSelectedMsg}\n\n${msg.askDeliveryType}`,
         newState: 'asking_delivery_type',
         collectedData: updatedData,
         shouldTransfer: false,

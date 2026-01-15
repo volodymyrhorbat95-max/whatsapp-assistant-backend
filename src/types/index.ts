@@ -34,6 +34,7 @@ export interface CustomMessages {
   farewell?: string;
   fallback?: string;
   closedMessage?: string;
+  closedMessageWithHours?: string;  // "Olá! No momento estamos fechados. Nosso horário é das {open} às {close}..."
 
   // Transfer/Fallback messages
   transferToHuman?: string;        // "Vou te conectar com um atendente agora..."
@@ -44,6 +45,15 @@ export interface CustomMessages {
   // Audio/Error handling messages
   audioTranscriptionFailed?: string; // "Não consegui entender o áudio. Pode escrever?"
   processingError?: string;          // "Desculpe, ocorreu um erro ao processar..."
+
+  // Order status notification messages (sent when business updates order status)
+  // CRITICAL: These are sent to customers via WhatsApp - must be configurable
+  statusPending?: string;          // "Seu pedido está pendente."
+  statusConfirmed?: string;        // "Seu pedido foi confirmado!"
+  statusPreparing?: string;        // "Seu pedido está sendo preparado! 🍳"
+  statusOutForDelivery?: string;   // "Seu pedido saiu para entrega! 🚗"
+  statusDelivered?: string;        // "Seu pedido foi entregue! Obrigado pela preferência! 🎉"
+  statusCancelled?: string;        // "Seu pedido foi cancelado."
 
   // Delivery flow messages
   askGreeting?: string;            // "Olá! Para fazer um pedido, diga 'oi'..."
@@ -61,6 +71,13 @@ export interface CustomMessages {
   pleaseConfirm?: string;          // "Por favor, confirme: Sim ou Não?"
   orderAlreadyConfirmed?: string;  // "Seu pedido já foi confirmado!..."
 
+  // Menu display messages (delivery)
+  menuNotAvailable?: string;       // "Desculpe, o cardápio não está disponível no momento."
+  menuHeader?: string;             // "📋 *Nosso Cardápio:*"
+  menuFooter?: string;             // "Qual categoria você gostaria?"
+  categoryNoItems?: string;        // "Desculpe, não temos itens disponíveis em {category} no momento."
+  categoryItemsFooter?: string;    // "Qual você gostaria?"
+
   // Clothing flow messages
   askProductType?: string;         // "Olá! Que produto você está procurando?"
   askGender?: string;              // "É masculino ou feminino?"
@@ -75,6 +92,10 @@ export interface CustomMessages {
   pickupConfirmed?: string;        // "Certo! Você vai retirar na loja..."
   reservationCancelled?: string;   // "Sem problemas. Se quiser fazer outro pedido..."
   reservationAlreadyConfirmed?: string; // "Sua reserva já foi confirmada..."
+
+  // Clothing product display messages
+  optionsHeader?: string;          // "Temos essas opções:"
+  productSelected?: string;        // "Ótimo! {product} por R$ {price}."
 }
 
 // Financial health - costs for margin estimation

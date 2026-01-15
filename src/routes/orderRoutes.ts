@@ -13,14 +13,33 @@ import { validateId, validateOrderStatus } from '../middleware/validators';
 
 const router = Router();
 
-// Status messages in Brazilian Portuguese
-const STATUS_MESSAGES: Record<OrderStatus, string> = {
+// Default status messages in Brazilian Portuguese
+// CRITICAL: These are fallbacks - actual messages MUST come from client configuration
+// (Predictable, Deterministic Responses requirement)
+const DEFAULT_STATUS_MESSAGES: Record<OrderStatus, string> = {
   pending: 'Seu pedido está pendente.',
   confirmed: 'Seu pedido foi confirmado!',
   preparing: 'Seu pedido está sendo preparado! 🍳',
   out_for_delivery: 'Seu pedido saiu para entrega! 🚗',
   delivered: 'Seu pedido foi entregue! Obrigado pela preferência! 🎉',
   cancelled: 'Seu pedido foi cancelado.'
+};
+
+// Map OrderStatus to CustomMessages field name
+const STATUS_MESSAGE_KEYS: Record<OrderStatus, keyof import('../types').CustomMessages> = {
+  pending: 'statusPending',
+  confirmed: 'statusConfirmed',
+  preparing: 'statusPreparing',
+  out_for_delivery: 'statusOutForDelivery',
+  delivered: 'statusDelivered',
+  cancelled: 'statusCancelled'
+};
+
+// Get status message from client configuration, falling back to default
+const getStatusMessage = (status: OrderStatus, clientConfig: import('../types').ClientConfiguration | null): string => {
+  const key = STATUS_MESSAGE_KEYS[status];
+  const customMessage = clientConfig?.messages?.[key];
+  return customMessage || DEFAULT_STATUS_MESSAGES[status];
 };
 
 /**
@@ -179,7 +198,8 @@ router.put('/:id/status', requireAuth, validateId('id'), validateOrderStatus, as
           // Get client to find WhatsApp number
           const client = await Client.findByPk(order.clientId);
           if (client) {
-            const statusMessage = STATUS_MESSAGES[status as OrderStatus];
+              // CRITICAL: Get message from client configuration (Predictable, Deterministic Responses requirement)
+            const statusMessage = getStatusMessage(status as OrderStatus, client.configuration);
 
             // CRITICAL: Store the notification message FIRST (before sending)
             // Requirement: "Every single message must be permanently stored in the database"

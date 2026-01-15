@@ -26,19 +26,25 @@ export interface FlowResponse {
 }
 
 // Format menu for display
+// CRITICAL: All text must come from configuration (Predictable, Deterministic Responses requirement)
 const formatMenu = (config: ClientConfiguration): string => {
+  // Get configurable messages with defaults
+  const menuNotAvailable = config.messages?.menuNotAvailable || 'Desculpe, o cardápio não está disponível no momento.';
+  const menuHeader = config.messages?.menuHeader || '📋 *Nosso Cardápio:*';
+  const menuFooter = config.messages?.menuFooter || 'Qual categoria você gostaria?';
+
   if (!config.catalog || config.catalog.length === 0) {
-    return 'Desculpe, o cardápio não está disponível no momento.';
+    return menuNotAvailable;
   }
 
   // Filter out categories with no items
   const categoriesWithItems = config.catalog.filter(cat => cat.items && cat.items.length > 0);
 
   if (categoriesWithItems.length === 0) {
-    return 'Desculpe, o cardápio não está disponível no momento.';
+    return menuNotAvailable;
   }
 
-  let menu = '📋 *Nosso Cardápio:*\n\n';
+  let menu = `${menuHeader}\n\n`;
 
   for (const category of categoriesWithItems) {
     menu += `*${category.category}:*\n`;
@@ -48,7 +54,7 @@ const formatMenu = (config: ClientConfiguration): string => {
     menu += '\n';
   }
 
-  menu += 'Qual categoria você gostaria?';
+  menu += menuFooter;
 
   return menu;
 };
@@ -76,8 +82,13 @@ const findItemInCatalog = (itemName: string, config: ClientConfiguration): Order
 };
 
 // Get items from category
+// CRITICAL: All text must come from configuration (Predictable, Deterministic Responses requirement)
 const getItemsFromCategory = (categoryName: string, config: ClientConfiguration): string => {
   if (!config.catalog) return '';
+
+  // Get configurable messages with defaults
+  const categoryNoItemsTemplate = config.messages?.categoryNoItems || 'Desculpe, não temos itens disponíveis em {category} no momento.';
+  const categoryItemsFooter = config.messages?.categoryItemsFooter || 'Qual você gostaria?';
 
   for (const category of config.catalog) {
     const normalizedCat = category.category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -86,14 +97,14 @@ const getItemsFromCategory = (categoryName: string, config: ClientConfiguration)
     if (normalizedCat.includes(normalizedInput) || normalizedInput.includes(normalizedCat)) {
       // Handle empty category (no items)
       if (!category.items || category.items.length === 0) {
-        return `Desculpe, não temos itens disponíveis em ${category.category} no momento.`;
+        return categoryNoItemsTemplate.replace('{category}', category.category);
       }
 
       let response = `*${category.category}:*\n\n`;
       for (const item of category.items) {
         response += `• ${item.name} - R$ ${item.price.toFixed(2)}\n`;
       }
-      response += '\nQual você gostaria?';
+      response += '\n' + categoryItemsFooter;
       return response;
     }
   }
