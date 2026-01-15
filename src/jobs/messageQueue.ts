@@ -62,6 +62,19 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
 
   const { from, to, content: originalContent, isAudio, mediaUrl } = job.data;
 
+  // Track the processed content (transcribed for audio, original for text)
+  // Declared outside try block so it's accessible in catch for error recovery
+  let processedContent: string = originalContent;
+
+  // Track whether incoming message was already stored to prevent duplicates on retry
+  let incomingMessageStored = false;
+
+  // Track conversation ID for error recovery
+  let conversationId: number | null = null;
+
+  // Track client configuration for error recovery (to use configurable error messages)
+  let clientConfig: import('../types').ClientConfiguration | null = null;
+
   try {
     console.log(`Processing WhatsApp message from ${from} to ${to}`);
 
@@ -72,6 +85,9 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       console.error(`No active client found for WhatsApp number: ${to}`);
       return;
     }
+
+    // Store client configuration for error recovery
+    clientConfig = client.configuration;
 
     // 2. Check for existing conversation (including transferred)
     // CRITICAL: If conversation is transferred, store message but DO NOT process through flow
@@ -85,19 +101,23 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
     if (existingConversation && existingConversation.status === 'transferred') {
       console.log(`Conversation ${existingConversation.id} is transferred - storing message only, no bot response`);
 
+      // Track conversation ID for error recovery
+      conversationId = existingConversation.id;
+
       // Store the incoming message for record-keeping (requirement)
-      let content = originalContent;
+      // Also update processedContent for error recovery
       if (isAudio && mediaUrl) {
         const transcription = await audioService.processAudioMessage(mediaUrl);
-        content = transcription || '[Audio transcription failed]';
+        processedContent = transcription || '[Audio transcription failed]';
       }
 
       await messageService.createMessage(
         existingConversation.id,
         'incoming',
-        content || '[Message content unavailable]',
+        processedContent || '[Message content unavailable]',
         isAudio ? 'audio' : 'text'
       );
+      incomingMessageStored = true;
 
       // Update timestamp on transferred conversation
       await conversationService.updateConversationTimestamp(existingConversation.id);
@@ -112,6 +132,9 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       from
     );
 
+    // Track conversation ID for error recovery
+    conversationId = conversation.id;
+
     // Set flowType based on client segment on first message if not set
     if (!conversation.flowType) {
       const flowType = client.segment; // 'delivery' or 'clothing' from client config
@@ -122,22 +145,27 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
     }
 
     // 4. Handle audio transcription if needed
-    let content = originalContent;
     if (isAudio && mediaUrl) {
       console.log('Transcribing audio message...');
       const transcription = await audioService.processAudioMessage(mediaUrl);
 
       if (!transcription) {
         // Transcription failed - ask user to type
-        const fallbackMessage = 'Não consegui entender o áudio. Pode escrever?';
+        // CRITICAL: Use configurable message (Predictable, Deterministic Responses requirement)
+        const fallbackMessage = client.configuration.messages?.audioTranscriptionFailed
+          || 'Não consegui entender o áudio. Pode escrever?';
+
+        // Update processedContent for error recovery tracking
+        processedContent = '[Audio transcription failed]';
 
         // Store incoming audio message (failed transcription)
         await messageService.createMessage(
           conversation.id,
           'incoming',
-          '[Audio transcription failed]',
+          processedContent,
           'audio'
         );
+        incomingMessageStored = true;
 
         // Store outgoing message FIRST (before sending)
         // CRITICAL: Store before send to prevent data loss on retry
@@ -154,22 +182,24 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
         return;
       }
 
-      content = transcription;
-      console.log('Audio transcribed:', content);
+      // Update processedContent with transcription for error recovery
+      processedContent = transcription;
+      console.log('Audio transcribed:', processedContent);
     }
 
     // 5. Save incoming message
     await messageService.createMessage(
       conversation.id,
       'incoming',
-      content,
+      processedContent,
       isAudio ? 'audio' : 'text'
     );
+    incomingMessageStored = true;
 
     // 6. Process through flow engine
     const flowResponse = flowEngine.processMessage(
       conversation,
-      content,
+      processedContent,
       client.configuration
     );
 
@@ -237,38 +267,32 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       jobId: job.id
     });
 
-    // Try to store and send error message to customer
+    // Store incoming message if not already stored (prevents data loss on final retry failure)
     // CRITICAL: Every message must be stored for record-keeping (requirement)
-    try {
-      const errorMessage = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns minutos.';
-
-      // Try to store messages FIRST (before sending)
-      // Find the conversation to store the error message
-      const client = await clientService.findClientByWhatsAppNumber(to);
-      if (client) {
-        const conversation = await conversationService.findOrCreateConversation(client.id, from);
-
-        // Store the original incoming message that caused the error (if not already stored)
+    // Only store if we have a conversation and message wasn't stored yet
+    if (conversationId && !incomingMessageStored) {
+      try {
         await messageService.createMessage(
-          conversation.id,
+          conversationId,
           'incoming',
-          originalContent || '[Message content unavailable]',
+          processedContent || '[Message content unavailable]',
           isAudio ? 'audio' : 'text'
         );
-
-        // Store the error response message BEFORE sending
-        await messageService.createMessage(
-          conversation.id,
-          'outgoing',
-          errorMessage,
-          'text'
-        );
+        incomingMessageStored = true;
+        console.log('Incoming message stored in error handler for conversation', conversationId);
+      } catch (storeError: any) {
+        console.error('Failed to store incoming message in error handler:', storeError.message);
       }
+    }
 
-      // Send error message to customer (after storing)
+    // Send error message to customer (best effort, don't store to avoid duplicates on retry)
+    // CRITICAL: Use configurable message when available (Predictable, Deterministic Responses requirement)
+    try {
+      const errorMessage = clientConfig?.messages?.processingError
+        || 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns minutos.';
       await twilioService.sendWhatsAppMessage(from, errorMessage);
     } catch (twilioError: any) {
-      console.error('Failed to send/store error message to customer:', twilioError.message);
+      console.error('Failed to send error message to customer:', twilioError.message);
     }
 
     // Re-throw to let BullMQ retry mechanism handle it

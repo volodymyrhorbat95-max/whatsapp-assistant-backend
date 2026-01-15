@@ -88,8 +88,10 @@ export const processMessage = (
 
     default: {
       // Unknown flow type - transfer to human
+      // CRITICAL: Use configurable message (Predictable, Deterministic Responses requirement)
+      const systemErrorMsg = config.messages?.systemError || 'Desculpe, ocorreu um erro. Vou te conectar com um atendente.';
       return {
-        response: 'Desculpe, ocorreu um erro. Vou te conectar com um atendente.',
+        response: systemErrorMsg,
         newState: 'transferred_to_human',
         collectedData,
         shouldTransfer: true,

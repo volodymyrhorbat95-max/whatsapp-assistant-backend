@@ -1,5 +1,6 @@
 // Delivery Flow - Deterministic state machine for delivery orders
 // All messages in Brazilian Portuguese (PT-BR)
+// CRITICAL: All bot responses must come from configuration (Predictable, Deterministic Responses requirement)
 
 import { ClientConfiguration, CollectedData, OrderItem } from '../types';
 import * as parser from './messageParser';
@@ -100,6 +101,15 @@ const getItemsFromCategory = (categoryName: string, config: ClientConfiguration)
   return '';
 };
 
+// Helper: Replace placeholders in message templates
+const formatMessage = (template: string, values: { [key: string]: string }): string => {
+  let result = template;
+  for (const [key, value] of Object.entries(values)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  }
+  return result;
+};
+
 // Process message based on current state
 export const processDeliveryFlow = (
   currentState: DeliveryState | null,
@@ -112,10 +122,41 @@ export const processDeliveryFlow = (
     currentState = 'greeting';
   }
 
+  // Get ALL messages from config with defaults
+  // CRITICAL: Every response MUST be configurable (Predictable, Deterministic Responses requirement)
+  const msg = {
+    // Core messages
+    greeting: config.messages?.greeting || 'Olá! Bem-vindo! 😊',
+    confirmation: config.messages?.confirmation || 'Pedido confirmado! 🎉',
+    farewell: config.messages?.farewell || 'Em breve estará a caminho. Obrigado!',
+
+    // Transfer messages
+    transferToHuman: config.messages?.transferToHuman || 'Vou te conectar com um atendente agora. Um momento, por favor.',
+    exchangeReturnTransfer: config.messages?.exchangeReturnTransfer || 'Vou te conectar com um atendente para te ajudar com isso.',
+    alreadyWithAgent: config.messages?.alreadyWithAgent || 'Você já está em contato com um atendente. Aguarde um momento.',
+    systemError: config.messages?.systemError || 'Desculpe, ocorreu um erro. Vou te conectar com um atendente.',
+
+    // Flow messages
+    askGreeting: config.messages?.askGreeting || 'Olá! Para fazer um pedido, diga "oi" ou "quero fazer um pedido".',
+    chooseCategory: config.messages?.chooseCategory || 'Por favor, escolha uma categoria: {categories}.',
+    itemAdded: config.messages?.itemAdded || '{item} adicionado! R$ {price}\n\nQuer mais alguma coisa?',
+    noItemsYet: config.messages?.noItemsYet || 'Você ainda não adicionou nenhum item. Qual você gostaria?',
+    askAddress: config.messages?.askAddress || 'Ótimo! Qual o endereço para entrega?',
+    itemNotFound: config.messages?.itemNotFound || 'Desculpe, não encontrei esse item no cardápio. Pode tentar novamente?',
+    addressConfirmed: config.messages?.addressConfirmed || 'Endereço confirmado: {address}\n\nForma de pagamento: Pix, Cartão ou Dinheiro?',
+    invalidAddress: config.messages?.invalidAddress || 'Por favor, forneça um endereço completo com número.',
+    paymentNotAccepted: config.messages?.paymentNotAccepted || 'Desculpe, não aceitamos {method}. Aceitamos: {accepted}.',
+    choosePayment: config.messages?.choosePayment || 'Por favor, escolha: {methods}.',
+    askConfirmation: config.messages?.askConfirmation || 'Posso confirmar seu pedido?',
+    orderCancelled: config.messages?.orderCancelled || 'Pedido cancelado. Se quiser fazer um novo pedido, é só me chamar!',
+    pleaseConfirm: config.messages?.pleaseConfirm || 'Por favor, confirme: Sim ou Não?',
+    orderAlreadyConfirmed: config.messages?.orderAlreadyConfirmed || 'Seu pedido já foi confirmado! Se precisar de algo mais, é só chamar.'
+  };
+
   // Check for complaints at any stage
   if (parser.parseComplaint(message)) {
     return {
-      response: 'Vou te conectar com um atendente agora. Um momento, por favor.',
+      response: msg.transferToHuman,
       newState: 'transferred_to_human',
       collectedData,
       shouldTransfer: true,
@@ -127,7 +168,7 @@ export const processDeliveryFlow = (
   // Check for exchange/return requests at any stage
   if (parser.parseExchangeReturn(message)) {
     return {
-      response: 'Vou te conectar com um atendente para te ajudar com isso.',
+      response: msg.exchangeReturnTransfer,
       newState: 'transferred_to_human',
       collectedData,
       shouldTransfer: true,
@@ -136,18 +177,13 @@ export const processDeliveryFlow = (
     };
   }
 
-  // Get custom messages from config or use defaults
-  const greetingMessage = config.messages?.greeting || 'Olá! Bem-vindo! 😊';
-  const confirmationMessage = config.messages?.confirmation || 'Pedido confirmado! 🎉';
-  const farewellMessage = config.messages?.farewell || 'Em breve estará a caminho. Obrigado!';
-
   // State machine logic
   switch (currentState) {
     case 'greeting': {
       if (parser.parseGreeting(message)) {
         const menuText = formatMenu(config);
         return {
-          response: `${greetingMessage}\n\n${menuText}`,
+          response: `${msg.greeting}\n\n${menuText}`,
           newState: 'showing_menu',
           collectedData: { ...collectedData, items: [] },
           shouldTransfer: false,
@@ -156,7 +192,7 @@ export const processDeliveryFlow = (
       }
 
       return {
-        response: 'Olá! Para fazer um pedido, diga "oi" ou "quero fazer um pedido".',
+        response: msg.askGreeting,
         newState: 'greeting',
         collectedData,
         shouldTransfer: false,
@@ -186,7 +222,7 @@ export const processDeliveryFlow = (
         : 'Hambúrgueres, Pizzas ou Bebidas';
 
       return {
-        response: `Por favor, escolha uma categoria: ${categoryList}.`,
+        response: formatMessage(msg.chooseCategory, { categories: categoryList }),
         newState: 'showing_menu',
         collectedData,
         shouldTransfer: false,
@@ -204,7 +240,10 @@ export const processDeliveryFlow = (
         const updatedData = { ...collectedData, items };
 
         return {
-          response: `${item.name} adicionado! R$ ${item.price.toFixed(2)}\n\nQuer mais alguma coisa?`,
+          response: formatMessage(msg.itemAdded, {
+            item: item.name,
+            price: item.price.toFixed(2)
+          }),
           newState: 'collecting_items',
           collectedData: updatedData,
           shouldTransfer: false,
@@ -216,7 +255,7 @@ export const processDeliveryFlow = (
       if (parser.parseNo(message)) {
         if (!collectedData.items || collectedData.items.length === 0) {
           return {
-            response: 'Você ainda não adicionou nenhum item. Qual você gostaria?',
+            response: msg.noItemsYet,
             newState: 'collecting_items',
             collectedData,
             shouldTransfer: false,
@@ -225,7 +264,7 @@ export const processDeliveryFlow = (
         }
 
         return {
-          response: 'Ótimo! Qual o endereço para entrega?',
+          response: msg.askAddress,
           newState: 'asking_address',
           collectedData,
           shouldTransfer: false,
@@ -234,7 +273,7 @@ export const processDeliveryFlow = (
       }
 
       return {
-        response: 'Desculpe, não encontrei esse item no cardápio. Pode tentar novamente?',
+        response: msg.itemNotFound,
         newState: 'collecting_items',
         collectedData,
         shouldTransfer: false,
@@ -247,7 +286,7 @@ export const processDeliveryFlow = (
         const updatedData = { ...collectedData, address: message };
 
         return {
-          response: `Endereço confirmado: ${message}\n\nForma de pagamento: Pix, Cartão ou Dinheiro?`,
+          response: formatMessage(msg.addressConfirmed, { address: message }),
           newState: 'asking_payment',
           collectedData: updatedData,
           shouldTransfer: false,
@@ -256,7 +295,7 @@ export const processDeliveryFlow = (
       }
 
       return {
-        response: 'Por favor, forneça um endereço completo com número.',
+        response: msg.invalidAddress,
         newState: 'asking_address',
         collectedData,
         shouldTransfer: false,
@@ -268,7 +307,7 @@ export const processDeliveryFlow = (
       const payment = parser.parsePayment(message);
 
       if (payment) {
-        // ✅ Validate payment method is accepted by this client
+        // Validate payment method is accepted by this client
         const acceptedMethods = config.paymentMethods || ['pix', 'card', 'cash'];
 
         if (!acceptedMethods.includes(payment)) {
@@ -280,7 +319,10 @@ export const processDeliveryFlow = (
           const acceptedNames = acceptedMethods.map(m => methodNames[m]).join(', ');
 
           return {
-            response: `Desculpe, não aceitamos ${methodNames[payment]}. Aceitamos: ${acceptedNames}.`,
+            response: formatMessage(msg.paymentNotAccepted, {
+              method: methodNames[payment],
+              accepted: acceptedNames
+            }),
             newState: 'asking_payment',
             collectedData,
             shouldTransfer: false,
@@ -302,7 +344,7 @@ export const processDeliveryFlow = (
         summary += `\n*Total:* R$ ${total.toFixed(2)}\n`;
         summary += `*Endereço:* ${updatedData.address}\n`;
         summary += `*Pagamento:* ${payment === 'pix' ? 'Pix' : payment === 'card' ? 'Cartão' : 'Dinheiro'}\n\n`;
-        summary += 'Posso confirmar seu pedido?';
+        summary += msg.askConfirmation;
 
         return {
           response: summary,
@@ -323,7 +365,7 @@ export const processDeliveryFlow = (
       const acceptedNames = acceptedMethods.map(m => methodNames[m]).join(', ');
 
       return {
-        response: `Por favor, escolha: ${acceptedNames}.`,
+        response: formatMessage(msg.choosePayment, { methods: acceptedNames }),
         newState: 'asking_payment',
         collectedData,
         shouldTransfer: false,
@@ -334,7 +376,7 @@ export const processDeliveryFlow = (
     case 'confirming_order': {
       if (parser.parseYes(message)) {
         return {
-          response: `${confirmationMessage}\n\n${farewellMessage}`,
+          response: `${msg.confirmation}\n\n${msg.farewell}`,
           newState: 'order_confirmed',
           collectedData,
           shouldTransfer: false,
@@ -344,7 +386,7 @@ export const processDeliveryFlow = (
 
       if (parser.parseNo(message)) {
         return {
-          response: 'Pedido cancelado. Se quiser fazer um novo pedido, é só me chamar!',
+          response: msg.orderCancelled,
           newState: 'greeting',
           collectedData: {},
           shouldTransfer: false,
@@ -353,7 +395,7 @@ export const processDeliveryFlow = (
       }
 
       return {
-        response: 'Por favor, confirme: Sim ou Não?',
+        response: msg.pleaseConfirm,
         newState: 'confirming_order',
         collectedData,
         shouldTransfer: false,
@@ -363,7 +405,7 @@ export const processDeliveryFlow = (
 
     case 'order_confirmed': {
       return {
-        response: 'Seu pedido já foi confirmado! Se precisar de algo mais, é só chamar.',
+        response: msg.orderAlreadyConfirmed,
         newState: 'order_confirmed',
         collectedData,
         shouldTransfer: false,
@@ -373,7 +415,7 @@ export const processDeliveryFlow = (
 
     case 'transferred_to_human': {
       return {
-        response: 'Você já está em contato com um atendente. Aguarde um momento.',
+        response: msg.alreadyWithAgent,
         newState: 'transferred_to_human',
         collectedData,
         shouldTransfer: false,
@@ -383,7 +425,7 @@ export const processDeliveryFlow = (
 
     default: {
       return {
-        response: 'Desculpe, ocorreu um erro. Vou te conectar com um atendente.',
+        response: msg.systemError,
         newState: 'transferred_to_human',
         collectedData,
         shouldTransfer: true,

@@ -1,5 +1,6 @@
 // Clothing Store Flow - Deterministic state machine for product reservations
 // All messages in Brazilian Portuguese (PT-BR)
+// CRITICAL: All bot responses must come from configuration (Predictable, Deterministic Responses requirement)
 
 import * as parser from './messageParser';
 import * as validators from './validators';
@@ -26,6 +27,15 @@ export interface FlowResponse {
   shouldCreateReservation: boolean;
 }
 
+// Helper: Replace placeholders in message templates
+const formatMessage = (template: string, values: { [key: string]: string }): string => {
+  let result = template;
+  for (const [key, value] of Object.entries(values)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  }
+  return result;
+};
+
 export const processClothingFlow = (
   currentState: ClothingState | null,
   message: string,
@@ -34,15 +44,49 @@ export const processClothingFlow = (
 ): FlowResponse => {
   const state = currentState || 'greeting';
 
-  // Get custom messages from config or use defaults
-  const greetingMessage = config.messages?.greeting || 'Olá! Bem-vindo!';
-  const confirmationMessage = config.messages?.confirmation || 'Reserva confirmada!';
-  const farewellMessage = config.messages?.farewell || 'Vamos preparar seu pedido. Em breve entraremos em contato. Obrigado! 🎉';
+  // Get ALL messages from config with defaults
+  // CRITICAL: Every response MUST be configurable (Predictable, Deterministic Responses requirement)
+  const msg = {
+    // Core messages
+    greeting: config.messages?.greeting || 'Olá! Bem-vindo!',
+    confirmation: config.messages?.confirmation || 'Reserva confirmada!',
+    farewell: config.messages?.farewell || 'Vamos preparar seu pedido. Em breve entraremos em contato. Obrigado! 🎉',
+
+    // Transfer messages
+    transferToHuman: config.messages?.transferToHuman || 'Vou te conectar com um atendente agora.',
+    exchangeReturnTransfer: config.messages?.exchangeReturnTransfer || 'Vou te conectar com um atendente para te ajudar com isso.',
+    alreadyWithAgent: config.messages?.alreadyWithAgent || 'Você já está sendo atendido por um humano. Aguarde um momento.',
+    systemError: config.messages?.systemError || 'Desculpe, algo deu errado. Vou te conectar com um atendente.',
+
+    // Clothing flow specific messages
+    askProductType: config.messages?.askProductType || 'Olá! Que produto você está procurando? (Ex: camiseta, calça, vestido)',
+    askGender: config.messages?.askGender || 'É masculino ou feminino?',
+    invalidGender: config.messages?.invalidGender || 'Não entendi. É masculino ou feminino?',
+    askSize: config.messages?.askSize || 'Qual tamanho? (PP, P, M, G, GG, XG ou número)',
+    invalidSize: config.messages?.invalidSize || 'Não entendi o tamanho. Pode escolher: PP, P, M, G, GG, XG ou número?',
+    productNotAvailable: config.messages?.productNotAvailable || 'Desculpe, não temos esse produto disponível no momento. Quer procurar outro?',
+    chooseOption: config.messages?.chooseOption || 'Qual você gostaria? (Digite o número ou nome)',
+    invalidOption: config.messages?.invalidOption || 'Não entendi qual você quer. Pode escolher pelo número ou nome?',
+    askDeliveryType: config.messages?.askDeliveryType || 'Você quer retirar na loja ou entregar no seu endereço?',
+    invalidDeliveryType: config.messages?.invalidDeliveryType || 'Não entendi. Você quer retirar na loja ou entregar no seu endereço?',
+    pickupConfirmed: config.messages?.pickupConfirmed || 'Certo! Você vai retirar na loja.\n\nForma de pagamento: Pix, Cartão ou Dinheiro?',
+    reservationCancelled: config.messages?.reservationCancelled || 'Sem problemas. Se quiser fazer outro pedido, é só chamar!',
+    reservationAlreadyConfirmed: config.messages?.reservationAlreadyConfirmed || 'Sua reserva já foi confirmada. Se precisar de algo mais, é só chamar!',
+
+    // Shared messages (same as delivery)
+    askAddress: config.messages?.askAddress || 'Qual o endereço para entrega?',
+    addressConfirmed: config.messages?.addressConfirmed || 'Endereço confirmado: {address}\n\nForma de pagamento: Pix, Cartão ou Dinheiro?',
+    invalidAddress: config.messages?.invalidAddress || 'O endereço parece incompleto. Pode me dar o endereço completo com número?',
+    paymentNotAccepted: config.messages?.paymentNotAccepted || 'Desculpe, não aceitamos {method}. Aceitamos: {accepted}.',
+    choosePayment: config.messages?.choosePayment || 'Não entendi. Forma de pagamento: {methods}?',
+    askConfirmation: config.messages?.askConfirmation || 'Posso reservar e confirmar?',
+    pleaseConfirm: config.messages?.pleaseConfirm || 'Não entendi. Posso confirmar a reserva? (Sim ou Não)'
+  };
 
   // Complaint detection at any stage
   if (parser.parseComplaint(message)) {
     return {
-      response: 'Vou te conectar com um atendente agora.',
+      response: msg.transferToHuman,
       newState: 'transferred_to_human',
       collectedData,
       shouldTransfer: true,
@@ -54,7 +98,7 @@ export const processClothingFlow = (
   // Exchange/return request at any stage
   if (parser.parseExchangeReturn(message)) {
     return {
-      response: 'Vou te conectar com um atendente para te ajudar com isso.',
+      response: msg.exchangeReturnTransfer,
       newState: 'transferred_to_human',
       collectedData,
       shouldTransfer: true,
@@ -88,7 +132,7 @@ export const processClothingFlow = (
 
         // Step 2: Bot asks: Men's or Women's?
         return {
-          response: 'É masculino ou feminino?',
+          response: msg.askGender,
           newState: 'asking_gender',
           collectedData: updatedData,
           shouldTransfer: false,
@@ -98,7 +142,7 @@ export const processClothingFlow = (
 
       // Couldn't understand product
       return {
-        response: 'Olá! Que produto você está procurando? (Ex: camiseta, calça, vestido)',
+        response: msg.askProductType,
         newState: 'greeting',
         collectedData,
         shouldTransfer: false,
@@ -118,7 +162,7 @@ export const processClothingFlow = (
 
       if (!gender) {
         return {
-          response: 'Não entendi. É masculino ou feminino?',
+          response: msg.invalidGender,
           newState: 'asking_gender',
           collectedData,
           shouldTransfer: false,
@@ -136,7 +180,7 @@ export const processClothingFlow = (
 
       // Step 2 continued: What size?
       return {
-        response: 'Qual tamanho? (PP, P, M, G, GG, XG ou número)',
+        response: msg.askSize,
         newState: 'asking_size',
         collectedData: updatedData,
         shouldTransfer: false,
@@ -153,7 +197,7 @@ export const processClothingFlow = (
 
       if (!letterSizeMatch && !numericSizeMatch) {
         return {
-          response: 'Não entendi o tamanho. Pode escolher: PP, P, M, G, GG, XG ou número?',
+          response: msg.invalidSize,
           newState: 'asking_size',
           collectedData,
           shouldTransfer: false,
@@ -179,7 +223,7 @@ export const processClothingFlow = (
 
       if (options.length === 0) {
         return {
-          response: 'Desculpe, não temos esse produto disponível no momento. Quer procurar outro?',
+          response: msg.productNotAvailable,
           newState: 'greeting',
           collectedData: {},
           shouldTransfer: false,
@@ -195,7 +239,7 @@ export const processClothingFlow = (
         itemDesc += ` - R$ ${opt.price.toFixed(2)}`;
         responseText += itemDesc + '\n';
       });
-      responseText += '\nQual você gostaria? (Digite o número ou nome)';
+      responseText += '\n' + msg.chooseOption;
 
       return {
         response: responseText,
@@ -233,7 +277,7 @@ export const processClothingFlow = (
 
       if (!selectedProduct) {
         return {
-          response: 'Não entendi qual você quer. Pode escolher pelo número ou nome?',
+          response: msg.invalidOption,
           newState: 'showing_options',
           collectedData,
           shouldTransfer: false,
@@ -254,7 +298,7 @@ export const processClothingFlow = (
 
       // Step 5: Bot asks: Pickup at store or delivery?
       return {
-        response: `Ótimo! ${selectedProduct.name} por R$ ${selectedProduct.price.toFixed(2)}.\n\nVocê quer retirar na loja ou entregar no seu endereço?`,
+        response: `Ótimo! ${selectedProduct.name} por R$ ${selectedProduct.price.toFixed(2)}.\n\n${msg.askDeliveryType}`,
         newState: 'asking_delivery_type',
         collectedData: updatedData,
         shouldTransfer: false,
@@ -268,7 +312,7 @@ export const processClothingFlow = (
       if (normalized.includes('entregar') || normalized.includes('entrega')) {
         // Step 6: If delivery → Bot asks for address
         return {
-          response: 'Qual o endereço para entrega?',
+          response: msg.askAddress,
           newState: 'asking_address',
           collectedData: { ...collectedData, deliveryType: 'delivery' },
           shouldTransfer: false,
@@ -279,7 +323,7 @@ export const processClothingFlow = (
       if (normalized.includes('retirar') || normalized.includes('buscar') || normalized.includes('loja')) {
         // Skip address, go to payment
         return {
-          response: 'Certo! Você vai retirar na loja.\n\nForma de pagamento: Pix, Cartão ou Dinheiro?',
+          response: msg.pickupConfirmed,
           newState: 'asking_payment',
           collectedData: { ...collectedData, deliveryType: 'pickup' },
           shouldTransfer: false,
@@ -288,7 +332,7 @@ export const processClothingFlow = (
       }
 
       return {
-        response: 'Não entendi. Você quer retirar na loja ou entregar no seu endereço?',
+        response: msg.invalidDeliveryType,
         newState: 'asking_delivery_type',
         collectedData,
         shouldTransfer: false,
@@ -299,7 +343,7 @@ export const processClothingFlow = (
     case 'asking_address': {
       if (!validators.validateAddress(message)) {
         return {
-          response: 'O endereço parece incompleto. Pode me dar o endereço completo com número?',
+          response: msg.invalidAddress,
           newState: 'asking_address',
           collectedData,
           shouldTransfer: false,
@@ -309,7 +353,7 @@ export const processClothingFlow = (
 
       // Step 7: Bot asks for payment method
       return {
-        response: `Endereço confirmado: ${message}\n\nForma de pagamento: Pix, Cartão ou Dinheiro?`,
+        response: formatMessage(msg.addressConfirmed, { address: message }),
         newState: 'asking_payment',
         collectedData: { ...collectedData, address: message },
         shouldTransfer: false,
@@ -320,18 +364,18 @@ export const processClothingFlow = (
     case 'asking_payment': {
       const paymentMethod = parser.parsePayment(message);
 
-      if (!paymentMethod) {
-        // Generate dynamic payment options message based on accepted methods
-        const acceptedMethods = config.paymentMethods || ['pix', 'card', 'cash'];
-        const methodNames: { [key: string]: string } = {
-          pix: 'Pix',
-          card: 'Cartão',
-          cash: 'Dinheiro'
-        };
-        const acceptedNames = acceptedMethods.map(m => methodNames[m]).join(', ');
+      // Generate dynamic payment options message based on accepted methods
+      const acceptedMethods = config.paymentMethods || ['pix', 'card', 'cash'];
+      const methodNames: { [key: string]: string } = {
+        pix: 'Pix',
+        card: 'Cartão',
+        cash: 'Dinheiro'
+      };
+      const acceptedNames = acceptedMethods.map(m => methodNames[m]).join(', ');
 
+      if (!paymentMethod) {
         return {
-          response: `Não entendi. Forma de pagamento: ${acceptedNames}?`,
+          response: formatMessage(msg.choosePayment, { methods: acceptedNames }),
           newState: 'asking_payment',
           collectedData,
           shouldTransfer: false,
@@ -339,19 +383,13 @@ export const processClothingFlow = (
         };
       }
 
-      // ✅ Validate payment method is accepted by this client
-      const acceptedMethods = config.paymentMethods || ['pix', 'card', 'cash'];
-
+      // Validate payment method is accepted by this client
       if (!acceptedMethods.includes(paymentMethod)) {
-        const methodNames: { [key: string]: string } = {
-          pix: 'Pix',
-          card: 'Cartão',
-          cash: 'Dinheiro'
-        };
-        const acceptedNames = acceptedMethods.map(m => methodNames[m]).join(', ');
-
         return {
-          response: `Desculpe, não aceitamos ${methodNames[paymentMethod]}. Aceitamos: ${acceptedNames}.`,
+          response: formatMessage(msg.paymentNotAccepted, {
+            method: methodNames[paymentMethod],
+            accepted: acceptedNames
+          }),
           newState: 'asking_payment',
           collectedData,
           shouldTransfer: false,
@@ -377,7 +415,7 @@ export const processClothingFlow = (
       }
 
       summaryText += `💳 Pagamento: ${paymentMethod === 'pix' ? 'Pix' : paymentMethod === 'card' ? 'Cartão' : 'Dinheiro'}\n\n`;
-      summaryText += 'Posso reservar e confirmar?';
+      summaryText += msg.askConfirmation;
 
       return {
         response: summaryText,
@@ -392,7 +430,7 @@ export const processClothingFlow = (
       // Step 9: Customer says yes → Reservation is recorded
       if (parser.parseYes(message)) {
         return {
-          response: `${confirmationMessage} ${farewellMessage}`,
+          response: `${msg.confirmation} ${msg.farewell}`,
           newState: 'reservation_confirmed',
           collectedData,
           shouldTransfer: false,
@@ -402,7 +440,7 @@ export const processClothingFlow = (
 
       if (parser.parseNo(message)) {
         return {
-          response: 'Sem problemas. Se quiser fazer outro pedido, é só chamar!',
+          response: msg.reservationCancelled,
           newState: 'greeting',
           collectedData: {},
           shouldTransfer: false,
@@ -411,7 +449,7 @@ export const processClothingFlow = (
       }
 
       return {
-        response: 'Não entendi. Posso confirmar a reserva? (Sim ou Não)',
+        response: msg.pleaseConfirm,
         newState: 'confirming_reservation',
         collectedData,
         shouldTransfer: false,
@@ -423,7 +461,7 @@ export const processClothingFlow = (
       // Step 10: Bot updates when ready and when shipped/delivered
       // (This is handled by orderService.updateOrderStatus)
       return {
-        response: 'Sua reserva já foi confirmada. Se precisar de algo mais, é só chamar!',
+        response: msg.reservationAlreadyConfirmed,
         newState: 'reservation_confirmed',
         collectedData,
         shouldTransfer: false,
@@ -433,7 +471,7 @@ export const processClothingFlow = (
 
     case 'transferred_to_human': {
       return {
-        response: 'Você já está sendo atendido por um humano. Aguarde um momento.',
+        response: msg.alreadyWithAgent,
         newState: 'transferred_to_human',
         collectedData,
         shouldTransfer: false,
@@ -443,7 +481,7 @@ export const processClothingFlow = (
 
     default: {
       return {
-        response: 'Desculpe, algo deu errado. Vou te conectar com um atendente.',
+        response: msg.systemError,
         newState: 'transferred_to_human',
         collectedData,
         shouldTransfer: true,

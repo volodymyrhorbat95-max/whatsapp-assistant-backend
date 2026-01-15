@@ -59,10 +59,44 @@ module.exports = {
             sunday: { open: 'closed', close: 'closed' }
           },
           messages: {
+            // Core messages
             greeting: 'Olá! Bem-vindo à Loja de Roupas da Maria. Que produto você está procurando?',
-            confirmation: 'Posso reservar e confirmar?',
-            farewell: 'Obrigado pela preferência!',
-            fallback: 'Desculpe, não entendi. Pode me dizer o tipo de roupa que procura?'
+            confirmation: 'Reserva confirmada! 🎉',
+            farewell: 'Obrigado pela preferência! Em breve entraremos em contato.',
+            fallback: 'Desculpe, não entendi. Pode me dizer o tipo de roupa que procura?',
+            closedMessage: 'Olá! A Loja de Roupas da Maria está fechada no momento. Deixe sua mensagem que retornaremos!',
+
+            // Transfer messages
+            transferToHuman: 'Vou te conectar com um atendente agora. Um momento, por favor.',
+            exchangeReturnTransfer: 'Vou te conectar com um atendente para ajudar com troca ou devolução.',
+            alreadyWithAgent: 'Você já está em contato com um atendente. Aguarde um momento.',
+            systemError: 'Desculpe, ocorreu um erro. Vou te conectar com um atendente.',
+
+            // Audio/Error messages
+            audioTranscriptionFailed: 'Não consegui entender o áudio. Pode escrever, por favor?',
+            processingError: 'Desculpe, ocorreu um erro. Por favor, tente novamente em alguns minutos.',
+
+            // Clothing flow messages
+            askProductType: 'Olá! Que produto você está procurando? (Ex: camiseta, calça, vestido)',
+            askGender: 'É masculino ou feminino?',
+            invalidGender: 'Não entendi. É masculino ou feminino?',
+            askSize: 'Qual tamanho? (PP, P, M, G, GG, XG ou número)',
+            invalidSize: 'Não entendi o tamanho. Pode escolher: PP, P, M, G, GG, XG ou número?',
+            productNotAvailable: 'Desculpe, não temos esse produto disponível no momento. Quer procurar outro?',
+            chooseOption: 'Qual você gostaria? (Digite o número ou nome)',
+            invalidOption: 'Não entendi qual você quer. Pode escolher pelo número ou nome?',
+            askDeliveryType: 'Você quer retirar na loja ou entregar no seu endereço?',
+            invalidDeliveryType: 'Não entendi. Você quer retirar na loja ou entregar?',
+            pickupConfirmed: 'Certo! Você vai retirar na loja.\n\nForma de pagamento: Pix, Cartão ou Dinheiro?',
+            askAddress: 'Qual o endereço para entrega?',
+            addressConfirmed: 'Endereço confirmado: {address}\n\nForma de pagamento: Pix, Cartão ou Dinheiro?',
+            invalidAddress: 'O endereço parece incompleto. Pode me dar o endereço completo com número?',
+            paymentNotAccepted: 'Desculpe, não aceitamos {method}. Aceitamos: {accepted}.',
+            choosePayment: 'Não entendi. Forma de pagamento: {methods}?',
+            askConfirmation: 'Posso reservar e confirmar?',
+            pleaseConfirm: 'Não entendi. Posso confirmar a reserva? (Sim ou Não)',
+            reservationCancelled: 'Sem problemas. Se quiser fazer outro pedido, é só chamar!',
+            reservationAlreadyConfirmed: 'Sua reserva já foi confirmada. Se precisar de algo mais, é só chamar!'
           },
           costs: {
             fixedCosts: 3500,

@@ -37,10 +37,38 @@ module.exports = {
             sunday: { open: '18:00', close: '22:00' }
           },
           messages: {
+            // Core messages
             greeting: 'Olá! Bem-vindo à Pizzaria do João. Como posso ajudar?',
-            confirmation: 'Posso confirmar o seu pedido?',
-            farewell: 'Obrigado pela preferência!',
-            fallback: 'Desculpe, não entendi. Pode repetir?'
+            confirmation: 'Pedido confirmado! 🎉',
+            farewell: 'Obrigado pela preferência! Em breve estará a caminho.',
+            fallback: 'Desculpe, não entendi. Pode repetir?',
+            closedMessage: 'Olá! A Pizzaria do João está fechada no momento. Nosso horário de funcionamento é das 18h às 23h. Deixe sua mensagem!',
+
+            // Transfer messages
+            transferToHuman: 'Vou te conectar com um atendente agora. Um momento, por favor.',
+            exchangeReturnTransfer: 'Vou te conectar com um atendente para ajudar com isso.',
+            alreadyWithAgent: 'Você já está em contato com um atendente. Aguarde um momento.',
+            systemError: 'Desculpe, ocorreu um erro. Vou te conectar com um atendente.',
+
+            // Audio/Error messages
+            audioTranscriptionFailed: 'Não consegui entender o áudio. Pode escrever, por favor?',
+            processingError: 'Desculpe, ocorreu um erro. Por favor, tente novamente em alguns minutos.',
+
+            // Delivery flow messages
+            askGreeting: 'Olá! Para fazer um pedido, diga "oi" ou "quero pedir".',
+            chooseCategory: 'Por favor, escolha uma categoria: {categories}.',
+            itemAdded: '{item} adicionado! R$ {price}\n\nQuer mais alguma coisa?',
+            noItemsYet: 'Você ainda não adicionou nenhum item. Qual você gostaria?',
+            askAddress: 'Ótimo! Qual o endereço para entrega?',
+            itemNotFound: 'Desculpe, não encontrei esse item no cardápio. Pode tentar novamente?',
+            addressConfirmed: 'Endereço confirmado: {address}\n\nForma de pagamento: Pix, Cartão ou Dinheiro?',
+            invalidAddress: 'Por favor, forneça um endereço completo com número.',
+            paymentNotAccepted: 'Desculpe, não aceitamos {method}. Aceitamos: {accepted}.',
+            choosePayment: 'Por favor, escolha: {methods}.',
+            askConfirmation: 'Posso confirmar seu pedido?',
+            orderCancelled: 'Pedido cancelado. Se quiser fazer um novo pedido, é só me chamar!',
+            pleaseConfirm: 'Por favor, confirme: Sim ou Não?',
+            orderAlreadyConfirmed: 'Seu pedido já foi confirmado! Se precisar de algo mais, é só chamar.'
           },
           costs: {
             fixedCosts: 5000,

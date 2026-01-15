@@ -1,14 +1,16 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from './index';
+import { ClientConfiguration } from '../../types';
 
 // Interface matching database schema
+// CRITICAL: Must use ClientConfiguration type for type safety across the stack (rule.txt requirement)
 interface ClientAttributes {
   id: number;
   name: string;
   segment: 'delivery' | 'clothing';
   whatsappNumber: string;
   status: 'active' | 'inactive';
-  configuration: object;
+  configuration: ClientConfiguration;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,7 +23,7 @@ class Client extends Model<ClientAttributes, ClientCreationAttributes> implement
   public segment!: 'delivery' | 'clothing';
   public whatsappNumber!: string;
   public status!: 'active' | 'inactive';
-  public configuration!: object;
+  public configuration!: ClientConfiguration;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }

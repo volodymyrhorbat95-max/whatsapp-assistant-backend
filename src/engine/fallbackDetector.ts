@@ -132,9 +132,6 @@ export const shouldFallbackToHuman = (
   };
 };
 
-/**
- * Generate transfer message in PT-BR
- */
-export const getTransferMessage = (): string => {
-  return 'Vou te conectar com um atendente agora. Um momento, por favor.';
-};
+// NOTE: Transfer messages are NOT generated here.
+// CRITICAL: All bot responses must come from client configuration (Predictable, Deterministic Responses requirement)
+// Transfer messages are retrieved from config.messages.transferToHuman in deliveryFlow.ts and clothingFlow.ts

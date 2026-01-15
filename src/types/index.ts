@@ -28,11 +28,53 @@ export interface OperatingHours {
 }
 
 export interface CustomMessages {
+  // Core messages (already existed)
   greeting?: string;
   confirmation?: string;
   farewell?: string;
   fallback?: string;
   closedMessage?: string;
+
+  // Transfer/Fallback messages
+  transferToHuman?: string;        // "Vou te conectar com um atendente agora..."
+  exchangeReturnTransfer?: string; // "Vou te conectar com um atendente para te ajudar..."
+  alreadyWithAgent?: string;       // "Você já está em contato com um atendente..."
+  systemError?: string;            // "Desculpe, ocorreu um erro..."
+
+  // Audio/Error handling messages
+  audioTranscriptionFailed?: string; // "Não consegui entender o áudio. Pode escrever?"
+  processingError?: string;          // "Desculpe, ocorreu um erro ao processar..."
+
+  // Delivery flow messages
+  askGreeting?: string;            // "Olá! Para fazer um pedido, diga 'oi'..."
+  chooseCategory?: string;         // "Por favor, escolha uma categoria: {categories}"
+  itemAdded?: string;              // "{item} adicionado! R$ {price}..."
+  noItemsYet?: string;             // "Você ainda não adicionou nenhum item..."
+  askAddress?: string;             // "Ótimo! Qual o endereço para entrega?"
+  itemNotFound?: string;           // "Desculpe, não encontrei esse item..."
+  addressConfirmed?: string;       // "Endereço confirmado: {address}..."
+  invalidAddress?: string;         // "Por favor, forneça um endereço completo..."
+  paymentNotAccepted?: string;     // "Desculpe, não aceitamos {method}..."
+  choosePayment?: string;          // "Por favor, escolha: {methods}"
+  askConfirmation?: string;        // "Posso confirmar seu pedido?"
+  orderCancelled?: string;         // "Pedido cancelado..."
+  pleaseConfirm?: string;          // "Por favor, confirme: Sim ou Não?"
+  orderAlreadyConfirmed?: string;  // "Seu pedido já foi confirmado!..."
+
+  // Clothing flow messages
+  askProductType?: string;         // "Olá! Que produto você está procurando?"
+  askGender?: string;              // "É masculino ou feminino?"
+  invalidGender?: string;          // "Não entendi. É masculino ou feminino?"
+  askSize?: string;                // "Qual tamanho? (PP, P, M, G, GG, XG)"
+  invalidSize?: string;            // "Não entendi o tamanho..."
+  productNotAvailable?: string;    // "Desculpe, não temos esse produto disponível..."
+  chooseOption?: string;           // "Qual você gostaria? (Digite o número ou nome)"
+  invalidOption?: string;          // "Não entendi qual você quer..."
+  askDeliveryType?: string;        // "Você quer retirar na loja ou entregar?"
+  invalidDeliveryType?: string;    // "Não entendi. Você quer retirar ou entregar?"
+  pickupConfirmed?: string;        // "Certo! Você vai retirar na loja..."
+  reservationCancelled?: string;   // "Sem problemas. Se quiser fazer outro pedido..."
+  reservationAlreadyConfirmed?: string; // "Sua reserva já foi confirmada..."
 }
 
 // Financial health - costs for margin estimation
