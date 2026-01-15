@@ -4,6 +4,7 @@
 import { Router, Request, Response } from 'express';
 import * as orderService from '../services/orderService';
 import * as twilioService from '../services/twilioService';
+import * as messageService from '../services/messageService';
 import Conversation from '../database/models/Conversation';
 import Client from '../database/models/Client';
 import { OrderStatus } from '../types';
@@ -184,6 +185,17 @@ router.put('/:id/status', requireAuth, validateId('id'), validateOrderStatus, as
               conversation.customerPhone,
               statusMessage
             );
+
+            // CRITICAL: Store the notification message in database
+            // Requirement: "Every single message - both incoming from customers and outgoing
+            // from the bot - must be permanently stored in the database for record-keeping"
+            await messageService.createMessage(
+              conversation.id,
+              'outgoing',
+              statusMessage,
+              'text'
+            );
+
             notificationStatus = 'sent';
             console.log('Customer notified of status change:', status);
           }

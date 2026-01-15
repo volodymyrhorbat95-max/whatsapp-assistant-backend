@@ -55,6 +55,11 @@ export { messageQueue };
 
 // Process messages
 const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
+  // Skip health-check jobs - they're only for testing Redis connectivity
+  if (job.name === 'health-check') {
+    return;
+  }
+
   const { from, to, content: originalContent, isAudio, mediaUrl } = job.data;
 
   try {
@@ -190,14 +195,36 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       jobId: job.id
     });
 
-    // Try to send error message to customer
+    // Try to send error message to customer and store it
+    // CRITICAL: Every message must be stored for record-keeping (requirement)
     try {
-      await twilioService.sendWhatsAppMessage(
-        from,
-        'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns minutos.'
-      );
+      const errorMessage = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns minutos.';
+      await twilioService.sendWhatsAppMessage(from, errorMessage);
+
+      // Try to store the error message if we have a conversation
+      // Find the conversation to store the error message
+      const client = await clientService.findClientByWhatsAppNumber(to);
+      if (client) {
+        const conversation = await conversationService.findOrCreateConversation(client.id, from);
+
+        // Store the original incoming message that caused the error (if not already stored)
+        await messageService.createMessage(
+          conversation.id,
+          'incoming',
+          originalContent || '[Message content unavailable]',
+          isAudio ? 'audio' : 'text'
+        );
+
+        // Store the error response message
+        await messageService.createMessage(
+          conversation.id,
+          'outgoing',
+          errorMessage,
+          'text'
+        );
+      }
     } catch (twilioError: any) {
-      console.error('Failed to send error message to customer:', twilioError.message);
+      console.error('Failed to send/store error message to customer:', twilioError.message);
     }
 
     // Re-throw to let BullMQ retry mechanism handle it
