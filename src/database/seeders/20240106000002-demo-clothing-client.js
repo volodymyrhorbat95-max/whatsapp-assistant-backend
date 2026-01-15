@@ -65,6 +65,7 @@ module.exports = {
             farewell: 'Obrigado pela preferência! Em breve entraremos em contato.',
             fallback: 'Desculpe, não entendi. Pode me dizer o tipo de roupa que procura?',
             closedMessage: 'Olá! A Loja de Roupas da Maria está fechada no momento. Deixe sua mensagem que retornaremos!',
+            closedMessageWithHours: 'Olá! A Loja de Roupas da Maria está fechada no momento. Nosso horário hoje é das {open} às {close}. Deixe sua mensagem!',
 
             // Transfer messages
             transferToHuman: 'Vou te conectar com um atendente agora. Um momento, por favor.',
@@ -75,6 +76,18 @@ module.exports = {
             // Audio/Error messages
             audioTranscriptionFailed: 'Não consegui entender o áudio. Pode escrever, por favor?',
             processingError: 'Desculpe, ocorreu um erro. Por favor, tente novamente em alguns minutos.',
+
+            // Order status notification messages
+            statusPending: 'Sua reserva está pendente.',
+            statusConfirmed: 'Sua reserva foi confirmada! 👍',
+            statusPreparing: 'Sua peça está sendo separada! 👗',
+            statusOutForDelivery: 'Sua peça saiu para entrega! 🚗',
+            statusDelivered: 'Sua peça foi entregue! Obrigado pela preferência! 🎉',
+            statusCancelled: 'Sua reserva foi cancelada.',
+
+            // Clothing display messages
+            optionsHeader: 'Temos essas opções disponíveis:',
+            productSelected: 'Ótimo! {product} por R$ {price}.',
 
             // Clothing flow messages
             askProductType: 'Olá! Que produto você está procurando? (Ex: camiseta, calça, vestido)',

@@ -43,6 +43,7 @@ module.exports = {
             farewell: 'Obrigado pela preferência! Em breve estará a caminho.',
             fallback: 'Desculpe, não entendi. Pode repetir?',
             closedMessage: 'Olá! A Pizzaria do João está fechada no momento. Nosso horário de funcionamento é das 18h às 23h. Deixe sua mensagem!',
+            closedMessageWithHours: 'Olá! A Pizzaria do João está fechada no momento. Nosso horário hoje é das {open} às {close}. Deixe sua mensagem!',
 
             // Transfer messages
             transferToHuman: 'Vou te conectar com um atendente agora. Um momento, por favor.',
@@ -53,6 +54,21 @@ module.exports = {
             // Audio/Error messages
             audioTranscriptionFailed: 'Não consegui entender o áudio. Pode escrever, por favor?',
             processingError: 'Desculpe, ocorreu um erro. Por favor, tente novamente em alguns minutos.',
+
+            // Order status notification messages
+            statusPending: 'Seu pedido está pendente.',
+            statusConfirmed: 'Seu pedido foi confirmado! 👍',
+            statusPreparing: 'Seu pedido está sendo preparado! 🍕',
+            statusOutForDelivery: 'Seu pedido saiu para entrega! 🚗',
+            statusDelivered: 'Seu pedido foi entregue! Obrigado pela preferência! 🎉',
+            statusCancelled: 'Seu pedido foi cancelado.',
+
+            // Menu display messages
+            menuNotAvailable: 'Desculpe, nosso cardápio não está disponível no momento.',
+            menuHeader: '📋 *Cardápio da Pizzaria do João:*',
+            menuFooter: 'Qual categoria você gostaria?',
+            categoryNoItems: 'Desculpe, não temos itens disponíveis em {category} no momento.',
+            categoryItemsFooter: 'Qual você gostaria?',
 
             // Delivery flow messages
             askGreeting: 'Olá! Para fazer um pedido, diga "oi" ou "quero pedir".',
