@@ -109,7 +109,17 @@ module.exports = {
             askConfirmation: 'Posso reservar e confirmar?',
             pleaseConfirm: 'Não entendi. Posso confirmar a reserva? (Sim ou Não)',
             reservationCancelled: 'Sem problemas. Se quiser fazer outro pedido, é só chamar!',
-            reservationAlreadyConfirmed: 'Sua reserva já foi confirmada. Se precisar de algo mais, é só chamar!'
+            reservationAlreadyConfirmed: 'Sua reserva já foi confirmada. Se precisar de algo mais, é só chamar!',
+
+            // Reservation summary labels (displayed before mandatory confirmation)
+            reservationSummaryHeader: '📋 Resumo da Reserva:',
+            reservationSummaryProduct: '🛍️ Produto:',
+            reservationSummarySize: '📏 Tamanho:',
+            reservationSummaryColor: '🎨 Cor:',
+            reservationSummaryPrice: '💰 Valor:',
+            reservationSummaryDelivery: '📦 Entrega:',
+            reservationSummaryPickup: '📦 Retirar na loja',
+            orderSummaryPayment: '💳 Pagamento:'
           },
           costs: {
             fixedCosts: 3500,

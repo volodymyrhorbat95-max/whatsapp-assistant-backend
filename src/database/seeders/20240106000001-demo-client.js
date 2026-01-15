@@ -84,7 +84,14 @@ module.exports = {
             askConfirmation: 'Posso confirmar seu pedido?',
             orderCancelled: 'Pedido cancelado. Se quiser fazer um novo pedido, é só me chamar!',
             pleaseConfirm: 'Por favor, confirme: Sim ou Não?',
-            orderAlreadyConfirmed: 'Seu pedido já foi confirmado! Se precisar de algo mais, é só chamar.'
+            orderAlreadyConfirmed: 'Seu pedido já foi confirmado! Se precisar de algo mais, é só chamar.',
+
+            // Order summary labels (displayed before mandatory confirmation)
+            orderSummaryHeader: '*📝 Resumo do Pedido:*',
+            orderSummaryItems: '*Itens:*',
+            orderSummaryTotal: '*Total:*',
+            orderSummaryAddress: '*Endereço:*',
+            orderSummaryPayment: '*Pagamento:*'
           },
           costs: {
             fixedCosts: 5000,
