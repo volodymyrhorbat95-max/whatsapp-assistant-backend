@@ -498,9 +498,9 @@ function findMatchingProducts(
           }
         }
 
-        // Match by size if specified
+        // Match by size if specified (case-insensitive)
         if (searchCriteria.size && item.size) {
-          if (item.size !== searchCriteria.size) {
+          if (item.size.toUpperCase() !== searchCriteria.size.toUpperCase()) {
             continue;
           }
         }

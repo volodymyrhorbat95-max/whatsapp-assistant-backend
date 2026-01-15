@@ -213,6 +213,15 @@ export const validateClientConfiguration = (req: Request, res: Response, next: N
         return;
       }
 
+      // Validate category name is not empty (trim whitespace)
+      if (typeof category.category !== 'string' || category.category.trim().length === 0) {
+        res.status(400).json({
+          error: 'Invalid configuration',
+          message: `O nome da categoria ${i + 1} não pode estar vazio`
+        });
+        return;
+      }
+
       for (let j = 0; j < category.items.length; j++) {
         const item = category.items[j];
 
@@ -220,6 +229,15 @@ export const validateClientConfiguration = (req: Request, res: Response, next: N
           res.status(400).json({
             error: 'Invalid configuration',
             message: `catalog[${i}].items[${j}] must have 'name' (string) and 'price' (number)`
+          });
+          return;
+        }
+
+        // Validate item name is not empty (trim whitespace)
+        if (item.name.trim().length === 0) {
+          res.status(400).json({
+            error: 'Invalid configuration',
+            message: `O nome do item na categoria "${category.category}" não pode estar vazio`
           });
           return;
         }

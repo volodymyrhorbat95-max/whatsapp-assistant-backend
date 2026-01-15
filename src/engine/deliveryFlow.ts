@@ -30,9 +30,16 @@ const formatMenu = (config: ClientConfiguration): string => {
     return 'Desculpe, o cardápio não está disponível no momento.';
   }
 
+  // Filter out categories with no items
+  const categoriesWithItems = config.catalog.filter(cat => cat.items && cat.items.length > 0);
+
+  if (categoriesWithItems.length === 0) {
+    return 'Desculpe, o cardápio não está disponível no momento.';
+  }
+
   let menu = '📋 *Nosso Cardápio:*\n\n';
 
-  for (const category of config.catalog) {
+  for (const category of categoriesWithItems) {
     menu += `*${category.category}:*\n`;
     for (const item of category.items) {
       menu += `• ${item.name} - R$ ${item.price.toFixed(2)}\n`;
@@ -76,6 +83,11 @@ const getItemsFromCategory = (categoryName: string, config: ClientConfiguration)
     const normalizedInput = categoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     if (normalizedCat.includes(normalizedInput) || normalizedInput.includes(normalizedCat)) {
+      // Handle empty category (no items)
+      if (!category.items || category.items.length === 0) {
+        return `Desculpe, não temos itens disponíveis em ${category.category} no momento.`;
+      }
+
       let response = `*${category.category}:*\n\n`;
       for (const item of category.items) {
         response += `• ${item.name} - R$ ${item.price.toFixed(2)}\n`;
