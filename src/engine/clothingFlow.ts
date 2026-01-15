@@ -409,19 +409,29 @@ export const processClothingFlow = (
       const address = collectedData.address || '';
 
       // Step 8: Bot summarizes everything and asks "Can I reserve and confirm?"
-      let summaryText = '📋 Resumo da Reserva:\n\n';
-      summaryText += `🛍️ Produto: ${product.name}\n`;
-      if (product.size) summaryText += `📏 Tamanho: ${product.size}\n`;
-      if (product.color) summaryText += `🎨 Cor: ${product.color}\n`;
-      summaryText += `💰 Valor: R$ ${product.price.toFixed(2)}\n\n`;
+      // CRITICAL: All labels must come from configuration (Predictable, Deterministic Responses requirement)
+      const summaryHeader = config.messages?.reservationSummaryHeader || '📋 Resumo da Reserva:';
+      const summaryProduct = config.messages?.reservationSummaryProduct || '🛍️ Produto:';
+      const summarySize = config.messages?.reservationSummarySize || '📏 Tamanho:';
+      const summaryColor = config.messages?.reservationSummaryColor || '🎨 Cor:';
+      const summaryPrice = config.messages?.reservationSummaryPrice || '💰 Valor:';
+      const summaryDelivery = config.messages?.reservationSummaryDelivery || '📦 Entrega:';
+      const summaryPickup = config.messages?.reservationSummaryPickup || '📦 Retirar na loja';
+      const summaryPayment = config.messages?.orderSummaryPayment || '💳 Pagamento:';
+
+      let summaryText = `${summaryHeader}\n\n`;
+      summaryText += `${summaryProduct} ${product.name}\n`;
+      if (product.size) summaryText += `${summarySize} ${product.size}\n`;
+      if (product.color) summaryText += `${summaryColor} ${product.color}\n`;
+      summaryText += `${summaryPrice} R$ ${product.price.toFixed(2)}\n\n`;
 
       if (deliveryType === 'delivery') {
-        summaryText += `📦 Entrega: ${address}\n`;
+        summaryText += `${summaryDelivery} ${address}\n`;
       } else {
-        summaryText += `📦 Retirar na loja\n`;
+        summaryText += `${summaryPickup}\n`;
       }
 
-      summaryText += `💳 Pagamento: ${paymentMethod === 'pix' ? 'Pix' : paymentMethod === 'card' ? 'Cartão' : 'Dinheiro'}\n\n`;
+      summaryText += `${summaryPayment} ${paymentMethod === 'pix' ? 'Pix' : paymentMethod === 'card' ? 'Cartão' : 'Dinheiro'}\n\n`;
       summaryText += msg.askConfirmation;
 
       return {

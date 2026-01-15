@@ -344,17 +344,25 @@ export const processDeliveryFlow = (
         const updatedData = { ...collectedData, paymentMethod: payment };
 
         // Generate order summary
+        // CRITICAL: All labels must come from configuration (Predictable, Deterministic Responses requirement)
         const items = updatedData.items || [];
         const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        let summary = '*📝 Resumo do Pedido:*\n\n';
-        summary += '*Itens:*\n';
+        // Get configurable summary labels
+        const summaryHeader = config.messages?.orderSummaryHeader || '*📝 Resumo do Pedido:*';
+        const summaryItems = config.messages?.orderSummaryItems || '*Itens:*';
+        const summaryTotal = config.messages?.orderSummaryTotal || '*Total:*';
+        const summaryAddress = config.messages?.orderSummaryAddress || '*Endereço:*';
+        const summaryPayment = config.messages?.orderSummaryPayment || '*Pagamento:*';
+
+        let summary = `${summaryHeader}\n\n`;
+        summary += `${summaryItems}\n`;
         for (const item of items) {
           summary += `• ${item.name} - R$ ${item.price.toFixed(2)}\n`;
         }
-        summary += `\n*Total:* R$ ${total.toFixed(2)}\n`;
-        summary += `*Endereço:* ${updatedData.address}\n`;
-        summary += `*Pagamento:* ${payment === 'pix' ? 'Pix' : payment === 'card' ? 'Cartão' : 'Dinheiro'}\n\n`;
+        summary += `\n${summaryTotal} R$ ${total.toFixed(2)}\n`;
+        summary += `${summaryAddress} ${updatedData.address}\n`;
+        summary += `${summaryPayment} ${payment === 'pix' ? 'Pix' : payment === 'card' ? 'Cartão' : 'Dinheiro'}\n\n`;
         summary += msg.askConfirmation;
 
         return {

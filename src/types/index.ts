@@ -96,6 +96,22 @@ export interface CustomMessages {
   // Clothing product display messages
   optionsHeader?: string;          // "Temos essas opções:"
   productSelected?: string;        // "Ótimo! {product} por R$ {price}."
+
+  // Order summary labels (delivery) - displayed before confirmation
+  orderSummaryHeader?: string;     // "*📝 Resumo do Pedido:*"
+  orderSummaryItems?: string;      // "*Itens:*"
+  orderSummaryTotal?: string;      // "*Total:*"
+  orderSummaryAddress?: string;    // "*Endereço:*"
+  orderSummaryPayment?: string;    // "*Pagamento:*"
+
+  // Reservation summary labels (clothing) - displayed before confirmation
+  reservationSummaryHeader?: string;  // "📋 Resumo da Reserva:"
+  reservationSummaryProduct?: string; // "🛍️ Produto:"
+  reservationSummarySize?: string;    // "📏 Tamanho:"
+  reservationSummaryColor?: string;   // "🎨 Cor:"
+  reservationSummaryPrice?: string;   // "💰 Valor:"
+  reservationSummaryDelivery?: string; // "📦 Entrega:"
+  reservationSummaryPickup?: string;  // "📦 Retirar na loja"
 }
 
 // Financial health - costs for margin estimation
