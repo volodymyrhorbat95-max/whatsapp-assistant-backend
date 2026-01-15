@@ -180,20 +180,22 @@ router.put('/:id/status', requireAuth, validateId('id'), validateOrderStatus, as
           const client = await Client.findByPk(order.clientId);
           if (client) {
             const statusMessage = STATUS_MESSAGES[status as OrderStatus];
-            // Send message to customer phone
-            await twilioService.sendWhatsAppMessage(
-              conversation.customerPhone,
-              statusMessage
-            );
 
-            // CRITICAL: Store the notification message in database
-            // Requirement: "Every single message - both incoming from customers and outgoing
-            // from the bot - must be permanently stored in the database for record-keeping"
+            // CRITICAL: Store the notification message FIRST (before sending)
+            // Requirement: "Every single message must be permanently stored in the database"
+            // If we send first and createMessage fails, the message is lost from the database
             await messageService.createMessage(
               conversation.id,
               'outgoing',
               statusMessage,
               'text'
+            );
+
+            // Send message to customer phone
+            // If this fails, the message is stored but not sent - which is recoverable
+            await twilioService.sendWhatsAppMessage(
+              conversation.customerPhone,
+              statusMessage
             );
 
             notificationStatus = 'sent';

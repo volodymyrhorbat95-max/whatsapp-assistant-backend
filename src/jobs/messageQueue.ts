@@ -73,8 +73,41 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       return;
     }
 
-    // 2. Find or create conversation
-    const conversation = await conversationService.findOrCreateConversation(
+    // 2. Check for existing conversation (including transferred)
+    // CRITICAL: If conversation is transferred, store message but DO NOT process through flow
+    // Requirement: "The bot stops processing any further messages in this conversation"
+    const existingConversation = await conversationService.findActiveConversation(
+      client.id,
+      from
+    );
+
+    // Handle transferred conversation - store message but don't respond
+    if (existingConversation && existingConversation.status === 'transferred') {
+      console.log(`Conversation ${existingConversation.id} is transferred - storing message only, no bot response`);
+
+      // Store the incoming message for record-keeping (requirement)
+      let content = originalContent;
+      if (isAudio && mediaUrl) {
+        const transcription = await audioService.processAudioMessage(mediaUrl);
+        content = transcription || '[Audio transcription failed]';
+      }
+
+      await messageService.createMessage(
+        existingConversation.id,
+        'incoming',
+        content || '[Message content unavailable]',
+        isAudio ? 'audio' : 'text'
+      );
+
+      // Update timestamp on transferred conversation
+      await conversationService.updateConversationTimestamp(existingConversation.id);
+
+      console.log(`Message stored for transferred conversation ${existingConversation.id} - human agent will handle`);
+      return; // Do not process further - human agent handles this
+    }
+
+    // 3. Find or create ongoing conversation (normal flow)
+    const conversation = existingConversation || await conversationService.findOrCreateConversation(
       client.id,
       from
     );
@@ -88,7 +121,7 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       conversation.collectedData = {};
     }
 
-    // 3. Handle audio transcription if needed
+    // 4. Handle audio transcription if needed
     let content = originalContent;
     if (isAudio && mediaUrl) {
       console.log('Transcribing audio message...');
@@ -97,8 +130,8 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       if (!transcription) {
         // Transcription failed - ask user to type
         const fallbackMessage = 'Não consegui entender o áudio. Pode escrever?';
-        await twilioService.sendWhatsAppMessage(from, fallbackMessage);
 
+        // Store incoming audio message (failed transcription)
         await messageService.createMessage(
           conversation.id,
           'incoming',
@@ -106,12 +139,17 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
           'audio'
         );
 
+        // Store outgoing message FIRST (before sending)
+        // CRITICAL: Store before send to prevent data loss on retry
         await messageService.createMessage(
           conversation.id,
           'outgoing',
           fallbackMessage,
           'text'
         );
+
+        // Send fallback message to customer
+        await twilioService.sendWhatsAppMessage(from, fallbackMessage);
 
         return;
       }
@@ -120,7 +158,7 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       console.log('Audio transcribed:', content);
     }
 
-    // 4. Save incoming message
+    // 5. Save incoming message
     await messageService.createMessage(
       conversation.id,
       'incoming',
@@ -128,14 +166,14 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       isAudio ? 'audio' : 'text'
     );
 
-    // 5. Process through flow engine
+    // 6. Process through flow engine
     const flowResponse = flowEngine.processMessage(
       conversation,
       content,
       client.configuration
     );
 
-    // 6. Handle human transfer
+    // 7. Handle human transfer
     if (flowResponse.shouldTransfer && flowResponse.transferReason) {
       await conversationService.transferToHuman(
         conversation.id,
@@ -143,7 +181,7 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       );
     }
 
-    // 7. Create order if confirmed (delivery flow)
+    // 8. Create order if confirmed (delivery flow)
     if (flowResponse.shouldCreateOrder && flowResponse.collectedData.items) {
       await orderService.createOrder(
         conversation.id,
@@ -155,7 +193,7 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       await conversationService.markCompleted(conversation.id);
     }
 
-    // 7b. Create reservation if confirmed (clothing flow)
+    // 8b. Create reservation if confirmed (clothing flow)
     if (flowResponse.shouldCreateReservation && flowResponse.collectedData.product) {
       await orderService.createOrder(
         conversation.id,
@@ -167,23 +205,27 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       await conversationService.markCompleted(conversation.id);
     }
 
-    // 8. Update conversation state
+    // 9. Update conversation state
     await conversationService.updateState(
       conversation.id,
       flowResponse.newState,
       flowResponse.collectedData
     );
 
-    // 9. Send bot response
-    await twilioService.sendWhatsAppMessage(from, flowResponse.response);
-
-    // 10. Save outgoing message
+    // 10. Save outgoing message FIRST (before sending)
+    // CRITICAL: Store message before sending to prevent duplicates on retry
+    // If we send first and createMessage fails, BullMQ retry will send again
     await messageService.createMessage(
       conversation.id,
       'outgoing',
       flowResponse.response,
       'text'
     );
+
+    // 11. Send bot response via WhatsApp
+    // If this fails, the message is stored but not sent - which is recoverable
+    // The reverse (sent but not stored) violates the requirement
+    await twilioService.sendWhatsAppMessage(from, flowResponse.response);
 
     console.log(`Message processed successfully for conversation ${conversation.id}`);
   } catch (error: any) {
@@ -195,13 +237,12 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
       jobId: job.id
     });
 
-    // Try to send error message to customer and store it
+    // Try to store and send error message to customer
     // CRITICAL: Every message must be stored for record-keeping (requirement)
     try {
       const errorMessage = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente em alguns minutos.';
-      await twilioService.sendWhatsAppMessage(from, errorMessage);
 
-      // Try to store the error message if we have a conversation
+      // Try to store messages FIRST (before sending)
       // Find the conversation to store the error message
       const client = await clientService.findClientByWhatsAppNumber(to);
       if (client) {
@@ -215,7 +256,7 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
           isAudio ? 'audio' : 'text'
         );
 
-        // Store the error response message
+        // Store the error response message BEFORE sending
         await messageService.createMessage(
           conversation.id,
           'outgoing',
@@ -223,6 +264,9 @@ const processMessage = async (job: Job<WhatsAppMessageJob>): Promise<void> => {
           'text'
         );
       }
+
+      // Send error message to customer (after storing)
+      await twilioService.sendWhatsAppMessage(from, errorMessage);
     } catch (twilioError: any) {
       console.error('Failed to send/store error message to customer:', twilioError.message);
     }

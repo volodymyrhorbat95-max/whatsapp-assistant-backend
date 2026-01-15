@@ -146,6 +146,42 @@ export const findOrCreateConversation = async (
   return conversation;
 };
 
+// Find the most recent conversation for a customer (any status)
+// Used to check if there's a transferred conversation that should block bot processing
+export const findActiveConversation = async (
+  clientId: number,
+  customerPhone: string
+): Promise<Conversation | null> => {
+  // First check for transferred conversation (most recent within 24 hours)
+  const transferredConversation = await Conversation.findOne({
+    where: {
+      clientId,
+      customerPhone,
+      status: 'transferred',
+      lastMessageAt: {
+        [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Within last 24 hours
+      }
+    },
+    order: [['lastMessageAt', 'DESC']]
+  });
+
+  if (transferredConversation) {
+    return transferredConversation;
+  }
+
+  // Otherwise find ongoing conversation
+  const ongoingConversation = await Conversation.findOne({
+    where: {
+      clientId,
+      customerPhone,
+      status: 'ongoing'
+    },
+    order: [['lastMessageAt', 'DESC']]
+  });
+
+  return ongoingConversation;
+};
+
 // Update conversation lastMessageAt
 export const updateConversationTimestamp = async (conversationId: number): Promise<void> => {
   await Conversation.update(
