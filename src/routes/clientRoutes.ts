@@ -51,6 +51,16 @@ router.put('/:id', requireAuth, validateId('id'), validateClientConfiguration, a
     res.json(updatedClient);
   } catch (error: any) {
     console.error('Error updating client configuration:', error);
+
+    // Handle validation errors from service layer
+    if (error.message.includes('Category') ||
+        error.message.includes('Item') ||
+        error.message.includes('price') ||
+        error.message.includes('required')) {
+      res.status(400).json({ error: 'Validation error', message: error.message });
+      return;
+    }
+
     res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
@@ -86,6 +96,23 @@ router.post('/', requireAuth, createClientLimiter, validateRequiredFields(['name
     res.status(201).json(newClient);
   } catch (error: any) {
     console.error('Error creating client:', error);
+
+    // Handle Sequelize unique constraint violation (duplicate WhatsApp number)
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      res.status(400).json({
+        error: 'Duplicate WhatsApp number',
+        message: 'Este número de WhatsApp já está cadastrado para outro cliente'
+      });
+      return;
+    }
+
+    // Handle validation errors from service layer
+    if (error.message.includes('Business name') ||
+        error.message.includes('WhatsApp number')) {
+      res.status(400).json({ error: 'Validation error', message: error.message });
+      return;
+    }
+
     res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });

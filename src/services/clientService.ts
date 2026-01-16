@@ -8,6 +8,16 @@ export const createClient = async (
   whatsappNumber: string,
   configuration?: ClientConfiguration
 ): Promise<Client> => {
+  // Validate business name
+  const trimmedName = name?.trim();
+  if (!trimmedName || trimmedName.length === 0) {
+    throw new Error('Business name is required');
+  }
+
+  if (trimmedName.length < 2) {
+    throw new Error('Business name must have at least 2 characters');
+  }
+
   // Validate WhatsApp number format
   if (!whatsappNumber.startsWith('+')) {
     throw new Error('WhatsApp number must start with +');
@@ -25,7 +35,7 @@ export const createClient = async (
   }
 
   const client = await Client.create({
-    name,
+    name: trimmedName,
     segment,
     whatsappNumber,
     status: 'active',

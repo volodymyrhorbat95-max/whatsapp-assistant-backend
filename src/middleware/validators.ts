@@ -307,12 +307,40 @@ export const validateClientConfiguration = (req: Request, res: Response, next: N
       return;
     }
 
-    const validMessageKeys = ['greeting', 'confirmation', 'farewell', 'fallback', 'closedMessage'];
+    // All valid message keys from CustomMessages interface
+    // CRITICAL: Must include ALL configurable messages for Predictable, Deterministic Responses requirement
+    const validMessageKeys = [
+      // Core messages
+      'greeting', 'confirmation', 'farewell', 'fallback', 'closedMessage', 'closedMessageWithHours',
+      // Transfer/Fallback messages
+      'transferToHuman', 'exchangeReturnTransfer', 'alreadyWithAgent', 'systemError',
+      // Audio/Error handling messages
+      'audioTranscriptionFailed', 'processingError',
+      // Order status notification messages (sent when business updates order status)
+      'statusPending', 'statusConfirmed', 'statusPreparing', 'statusOutForDelivery', 'statusDelivered', 'statusCancelled',
+      // Delivery flow messages
+      'askGreeting', 'chooseCategory', 'itemAdded', 'noItemsYet', 'askAddress', 'itemNotFound',
+      'addressConfirmed', 'invalidAddress', 'paymentNotAccepted', 'choosePayment', 'askConfirmation',
+      'orderCancelled', 'pleaseConfirm', 'orderAlreadyConfirmed',
+      // Menu display messages (delivery)
+      'menuNotAvailable', 'menuHeader', 'menuFooter', 'categoryNoItems', 'categoryItemsFooter',
+      // Clothing flow messages
+      'askProductType', 'askGender', 'invalidGender', 'askSize', 'invalidSize', 'productNotAvailable',
+      'chooseOption', 'invalidOption', 'askDeliveryType', 'invalidDeliveryType', 'pickupConfirmed',
+      'reservationCancelled', 'reservationAlreadyConfirmed',
+      // Clothing product display messages
+      'optionsHeader', 'productSelected',
+      // Order summary labels (delivery)
+      'orderSummaryHeader', 'orderSummaryItems', 'orderSummaryTotal', 'orderSummaryAddress', 'orderSummaryPayment',
+      // Reservation summary labels (clothing)
+      'reservationSummaryHeader', 'reservationSummaryProduct', 'reservationSummarySize', 'reservationSummaryColor',
+      'reservationSummaryPrice', 'reservationSummaryDelivery', 'reservationSummaryPickup'
+    ];
     for (const key in configuration.messages) {
       if (!validMessageKeys.includes(key)) {
         res.status(400).json({
           error: 'Invalid configuration',
-          message: `messages can only contain: ${validMessageKeys.join(', ')}`
+          message: `messages.${key} is not a valid message key`
         });
         return;
       }
